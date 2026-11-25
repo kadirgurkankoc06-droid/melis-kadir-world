@@ -62,15 +62,13 @@ fetch('https://cdn.jsdelivr.net/gh/theaiagent/turkiye_iller_geojson@main/turkiye
      style:provinceStyle,
      onEachFeature:(feature,layer)=>{
        const name=provinceName(feature);
-       layer.on('click',()=>{
+       layer.on('click',()=>{\n         if(map.closePopup)map.closePopup();
          const wasVisited=visitedProvinces.includes(name);
          if(wasVisited) visitedProvinces=visitedProvinces.filter(x=>x!==name);
          else visitedProvinces.push(name);
          try{localStorage.setItem(PROVINCE_STORE,JSON.stringify(visitedProvinces))}catch(e){}
          provinceLayer.setStyle(provinceStyle);
          updateProvinceProgress();
-         const status=wasVisited?'Gezildi işareti kaldırıldı.':'Gezdiğimiz il olarak kaydedildi!';
-         layer.bindPopup(`<div style="min-width:150px"><b>${escapeHtml(name)}</b><p style="margin:6px 0;color:#9baac0;font-size:12px">${status}</p><small>Değiştirmek için ile tekrar tıkla.</small></div>`).openPopup();
        });
        layer.on({mouseover:e=>{if(!visitedProvinces.includes(name))e.target.setStyle({weight:2,color:'#ffffff',fillOpacity:.035})},mouseout:e=>provinceLayer.resetStyle(e.target)});
      }
