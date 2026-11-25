@@ -30,7 +30,7 @@ function newGame(){score1=score2=0;time=90;paused=false;ended=false;goalFlash=0;
 function down(k){return !!keys[k] || (onlineRole==='host' && !!remoteKeys[k])}
 
 function collideBallWithPlayer(p){
- // Oyuncu gövdesi ile kafa, dikey kapsül olarak ele alınır.
+ // Kafa + gövde tek bir kapsül gibi davranır; topun içeri girmesi engellenir.
  const ax=p.x, ay=p.y-78, by=p.y-27;
  const qy=Math.max(ay,Math.min(by,ball.y));
  let dx=ball.x-ax,dy=ball.y-qy,dist=Math.hypot(dx,dy);
@@ -38,9 +38,23 @@ function collideBallWithPlayer(p){
  if(dist<min){
    if(dist<0.001){dx=p.dir||1;dy=0;dist=1;}
    const nx=dx/dist,ny=dy/dist;
+   // Önce nüfuzu gider: top karakterin dış yüzeyine taşınır.
    ball.x=ax+nx*min;ball.y=qy+ny*min;
-   // Temasta top dursun; oyuncunun içine veya arkasına geçmesine izin verme.
-   ball.vx=0;ball.vy=0;
+   // Esnek çarpışma: topun hızı bir anda sıfırlanmaz; karakterin hareketi de hesaba katılır.
+   const pvx=p.vx||0, pvy=p.vy||0;
+   const rvx=ball.vx-pvx, rvy=ball.vy-pvy;
+   const normalSpeed=rvx*nx+rvy*ny;
+   if(normalSpeed<0){
+     const restitution=0.72; // topun enerjisinin bir kısmı korunur
+     const impulse=-(1+restitution)*normalSpeed/1.12;
+     ball.vx+=impulse*nx;
+     ball.vy+=impulse*ny;
+     // Hafif teğetsel sürtünme; çarpışma sonrası akıcı hareket sağlar.
+     const tx=-ny,ty=nx;
+     const tangentSpeed=(ball.vx-pvx)*tx+(ball.vy-pvy)*ty;
+     ball.vx-=tangentSpeed*tx*0.035;
+     ball.vy-=tangentSpeed*ty*0.035;
+   }
  }
 }
 function physics(dt){if(onlineRole==='guest')return;if(paused||ended)return;const step=Math.min(dt,0.03)*60;time-=dt;if(time<=0){time=0;ended=true;$('message').textContent=score1===score2?'Berabere! Rövanş zamanı.':score1>score2?'Melis kazandı! 💜🏆':'Kadir kazandı! ⚡🏆';}
@@ -52,10 +66,10 @@ for(const [p,left,right,jump,shot] of [[p1,'a','d','w','f'],[p2,'ArrowLeft','Arr
  // Karakterin tamamı için kapsül çarpışması: kafa + gövde. Top içinden geçemez.
  collideBallWithPlayer(p);
 }
-ball.vy+=gravity*.9*step;ball.x+=ball.vx*step;ball.y+=ball.vy*step;ball.vx*=Math.pow(.994,step);ball.vy*=Math.pow(.997,step);
+ball.vy+=gravity*.9*step;ball.x+=ball.vx*step;ball.y+=ball.vy*step;ball.vx*=Math.pow(.9975,step);ball.vy*=Math.pow(.999,step);
 // Hareketten sonra da kontrol et: hızlı topun bir karede karakterin içinden tünellemesini önler.
 collideBallWithPlayer(p1);collideBallWithPlayer(p2);
-if(ball.y+ball.r>ground){ball.y=ground-ball.r;ball.vy*=-.68;if(Math.abs(ball.vy)<1.2)ball.vy=0;ball.vx*=.985;}
+if(ball.y+ball.r>ground){ball.y=ground-ball.r;if(Math.abs(ball.vy)>1.7)ball.vy*=-.62;else ball.vy=0;ball.vx*=.982;if(Math.abs(ball.vx)<.035)ball.vx=0;}
 if(ball.y-ball.r<15){ball.y=15+ball.r;ball.vy=Math.abs(ball.vy)*.8;}
 // side walls except goal mouth
 if(ball.x-ball.r<10&&!(ball.y>ground-145)){ball.x=10+ball.r;ball.vx=Math.abs(ball.vx)*.8;}if(ball.x+ball.r>W-10&&!(ball.y>ground-145)){ball.x=W-10-ball.r;ball.vx=-Math.abs(ball.vx)*.8;}
