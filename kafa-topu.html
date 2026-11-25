@@ -25,7 +25,7 @@ let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSe
 const c=document.getElementById('game'),ctx=c.getContext('2d'),W=c.width,H=c.height,ground=475,keys={};let p1,p2,ball,score1=0,score2=0,time=90,paused=false,ended=false,last=0,goalFlash=0;
 const $=id=>document.getElementById(id);
 function player(x,name,color,hair,dir){return{x,y:ground,vx:0,vy:0,r:32,name,color,hair,dir,onGround:true,cool:0}}
-function resetPositions(){p1=player(570,'MELİS','#a78bfa','#39246f',-1);p2=player(430,'KADİR','#41d9df','#172e55',1);ball={x:W/2,y:ground-70,vx:0,vy:0,r:22};}
+function resetPositions(){p1=player(430,'MELİS','#a78bfa','#39246f',1);p2=player(570,'KADİR','#41d9df','#172e55',-1);ball={x:W/2,y:ground-70,vx:0,vy:0,r:22};}
 function newGame(){score1=score2=0;time=90;paused=false;ended=false;goalFlash=0;resetPositions();$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent='01:30';$('message').textContent='Maç başladı! Topa yaklaş ve şut tuşuna bas.';$('pause').textContent='⏸ Duraklat';}
 function down(k){return !!keys[k] || (onlineRole==='host' && !!remoteKeys[k])}
 
@@ -79,6 +79,9 @@ $('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(
 }
 function goal(msg){$('s1').textContent=score1;$('s2').textContent=score2;$('message').textContent=msg;goalFlash=1;resetPositions();if(score1>=5||score2>=5){ended=true;$('message').textContent=score1>score2?'Melis maçı kazandı! 💜🏆':'Kadir maçı kazandı! ⚡🏆';}}
 function rounded(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
+// Fotoğraflar yerel oyun varlıkları olarak yüklenir; yüzler dairesel kafa alanında gösterilir.
+const melisAvatar=new Image();melisAvatar.src='melis-avatar.png';
+const kadirAvatar=new Image();kadirAvatar.src='kadir-avatar.png';
 function draw(){ctx.clearRect(0,0,W,H);
 // sky and distant hills
 let g=ctx.createLinearGradient(0,0,0,ground);g.addColorStop(0,'#8bd7f2');g.addColorStop(1,'#e6f8ff');ctx.fillStyle=g;ctx.fillRect(0,0,W,ground);
@@ -98,10 +101,11 @@ ctx.fillStyle='#25452d55';ctx.beginPath();ctx.ellipse(0,2,39,9,0,0,7);ctx.fill()
 ctx.strokeStyle='#24334b';ctx.lineWidth=11;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-12,-12);ctx.lineTo(-17,0);ctx.moveTo(12,-12);ctx.lineTo(18,0);ctx.stroke();
 // body
 rounded(-23,-57,46,49,13,p.color);ctx.fillStyle='#ffffff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText(p.name==='MELİS'?'M':'K',0,-27);
-// head
-ctx.fillStyle='#ffd5b8';ctx.beginPath();ctx.arc(0,-78,31,0,7);ctx.fill();ctx.fillStyle=p.hair;ctx.beginPath();ctx.arc(0,-88,31,Math.PI,Math.PI*2);ctx.quadraticCurveTo(24,-105,27,-80);ctx.quadraticCurveTo(8,-92,-7,-82);ctx.quadraticCurveTo(-22,-72,-30,-83);ctx.fill();
-// eyes
-ctx.fillStyle='#182338';ctx.beginPath();ctx.arc(p.dir>0?10:-10,-78,3.5,0,7);ctx.fill();ctx.beginPath();ctx.arc(p.dir>0?21:-21,-78,3.5,0,7);ctx.fill();ctx.strokeStyle='#9d5362';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-68,7,.15,Math.PI-.15);ctx.stroke();
+// Gerçek fotoğraflı kafa: yuvarlak maske, ince beyaz kenarlık.
+const avatar=p.name==='MELİS'?melisAvatar:kadirAvatar;
+ctx.save();ctx.beginPath();ctx.arc(0,-78,32,0,Math.PI*2);ctx.clip();
+if(avatar.complete&&avatar.naturalWidth){ctx.drawImage(avatar,-32,-110,64,64);}else{ctx.fillStyle=p.hair;ctx.fillRect(-32,-110,64,64);}
+ctx.restore();ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,-78,32,0,Math.PI*2);ctx.stroke();
 // name plate
 rounded(-36,-128,72,20,8,'#101b2ddd');ctx.fillStyle='#fff';ctx.font='bold 11px system-ui';ctx.fillText(p.name,0,-114);ctx.restore();}
 drawP(p1);drawP(p2);
