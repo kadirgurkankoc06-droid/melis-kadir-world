@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MelisKadir - Mini Sokak Düellosu</title>
+<style>
+:root{--cyan:#39d5ff;--pink:#ff5b9b;--panel:rgba(8,15,30,.82)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101827;color:white;font-family:Inter,system-ui,Arial}
+#game{position:fixed;inset:0}canvas{display:block}
+#aim-dot{position:fixed;left:50vw;top:38vh;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:99999;display:block}
+#aim-dot::before,#aim-dot::after{content:"";position:absolute;background:#fff;box-shadow:0 0 1px 1px rgba(0,0,0,.85)}
+#aim-dot::before{width:2px;height:8px;left:10px;top:0;box-shadow:0 0 1px 1px rgba(0,0,0,.85),0 14px 0 0 #fff}
+#aim-dot::after{width:8px;height:2px;left:0;top:10px;box-shadow:0 0 1px 1px rgba(0,0,0,.85),14px 0 0 0 #fff}
+#hud{position:fixed;inset:0;pointer-events:none}
+.top{display:flex;justify-content:center;align-items:flex-start;padding:14px;gap:10px}
+.score{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid #ffffff22;border-radius:18px;padding:10px 18px;backdrop-filter:blur(8px);min-width:280px;justify-content:center}
+.team{font-weight:900;font-size:15px}.blue{color:var(--cyan)}.pink{color:var(--pink)}.num{font-size:27px;font-weight:1000}.timer{font-size:13px;color:#cbd5e1;text-align:center}
+.panel{pointer-events:auto;position:fixed;background:var(--panel);border:1px solid #ffffff24;border-radius:16px;padding:14px;backdrop-filter:blur(10px);box-shadow:0 12px 40px #0005}
+#connect{left:14px;top:14px;width:min(310px,calc(100vw - 28px));z-index:5}
+h1{font-size:19px;margin:0 0 5px}p{font-size:12px;color:#c3cede;line-height:1.45;margin:5px 0 10px}
+input{width:100%;padding:10px 11px;border-radius:9px;border:1px solid #ffffff33;background:#0d1728;color:white;margin:4px 0 8px;outline:none}
+button{border:0;border-radius:9px;padding:10px 12px;font-weight:800;cursor:pointer;background:var(--cyan);color:#06202b}
+button.alt{background:#27374e;color:white}button:disabled{opacity:.45;cursor:default}
+.actions{display:flex;gap:7px}.actions button{flex:1}
+#status{font-size:12px;color:#9fb0c8;margin-top:8px;min-height:17px}
+#help{right:14px;top:14px;max-width:235px}
+#bottom{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center}
+.stat{background:var(--panel);border:1px solid #ffffff22;border-radius:12px;padding:9px 14px;font-size:13px;font-weight:800;min-width:100px;text-align:center}
+.bar{height:7px;background:#334155;border-radius:9px;overflow:hidden;margin-top:5px}.fill{height:100%;background:#50e08a;width:100%}
+#message{position:fixed;left:50%;top:25%;transform:translateX(-50%);font-size:26px;font-weight:1000;text-shadow:0 3px 12px #000;white-space:nowrap;text-align:center}
+#mobile{display:none;position:fixed;bottom:20px;left:15px;right:15px;justify-content:space-between;pointer-events:none}
+.pad{display:grid;grid-template-columns:42px 42px 42px;grid-template-rows:42px 42px 42px;gap:3px;pointer-events:auto}
+.pad button,.fire{background:#10243bc9;color:white;border:1px solid #ffffff55;border-radius:12px;font-size:17px;touch-action:none}
+.pad button:nth-child(1){grid-column:2}.pad button:nth-child(2){grid-column:1;grid-row:2}.pad button:nth-child(3){grid-column:2;grid-row:2}.pad button:nth-child(4){grid-column:3;grid-row:2}.pad button:nth-child(5){grid-column:2;grid-row:3}
+.fire{pointer-events:auto;width:68px;height:68px;border-radius:50%;align-self:end;background:#ff4775d9;font-weight:900}
+@media(max-width:760px){#help{display:none}#connect{top:8px;left:8px;padding:10px;width:245px}.top{padding-top:8px}.score{min-width:160px;padding:7px 10px}.team{font-size:11px}.num{font-size:20px}#mobile{display:flex}#bottom{bottom:125px}#message{top:32%;font-size:20px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="aim-dot" aria-hidden="true"></div>
+<div id="hud">
+ <div class="top"><div class="score"><span class="team blue">SEN</span><span class="num blue" id="s1">0</span><span class="timer" id="clock">03:00<br>DUELLO</span><span class="num pink" id="s2">0</span><span class="team pink">RAKİP</span></div></div>
+ <div id="connect" class="panel">
+  <h1>💗 MelisKadir</h1><p style="font-weight:800;color:#fff;margin:0 0 6px">Mini Sokak Düellosu</p><p>Bir kişi oda açsın, diğer kişi oda koduyla katılsın. İkiniz de farklı cihazlardan oynayabilirsiniz.</p>
+  <button id="solo" class="alt" style="width:100%;margin-top:7px">Tek başıma dene</button>
+  <button id="host" style="width:100%;margin-top:7px">Oda kur</button>
+  <div id="hostInfo" style="display:none"><p>Oda kodun:</p><input id="myid" readonly><button class="alt" id="copy">Kodu kopyala</button></div>
+  <p style="margin-top:10px">Arkadaşının kodu</p><input id="peerid" placeholder="Oda kodunu buraya yapıştır">
+  <button id="join" class="alt" style="width:100%">Odaya katıl</button>
+  <div id="status">Bağlantı bekleniyor · İnternet gerekli</div>
+ </div>
+ <div id="help" class="panel"><b>Kontroller</b><p><b>W A S D</b> hareket · <b>Fare</b> nişan · <b>Sol tık</b> ateş · <b>Shift</b> koş</p><p>Sandıkların arkasına saklan. İlk 5 skor kazanır!</p></div>
+ <div id="bottom"><div class="stat">❤️ CAN <span id="hp">100</span><div class="bar"><div class="fill" id="health"></div></div></div><div class="stat">🔫 MERMİ <span id="ammo">30</span></div></div>
+ <div id="message">Odayı kur veya katıl</div>
+ <div id="mobile"><div class="pad"><button data-k="w">▲</button><button data-k="a">◀</button><button data-k="s">▼</button><button data-k="d">▶</button></div><button class="fire" id="mobileFire">ATEŞ</button></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(()=>{
+const status=document.getElementById('status'), msg=document.getElementById('message');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x8ac7e8); scene.fog=new THREE.Fog(0x8ac7e8,24,65);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,120);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;document.getElementById('game').appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x627080,2));const sun=new THREE.DirectionalLight(0xffffff,2.3);sun.position.set(-8,16,9);sun.castShadow=true;scene.add(sun);
+const mat=(c,r=.8)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),mat(0x929b83));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const road=new THREE.Mesh(new THREE.PlaneGeometry(18,48),mat(0x4b5662));road.rotation.x=-Math.PI/2;road.position.y=.015;road.receiveShadow=true;scene.add(road);
+for(let z=-22;z<=22;z+=5){let line=new THREE.Mesh(new THREE.PlaneGeometry(.16,2.3),mat(0xe8d9a2));line.rotation.x=-Math.PI/2;line.position.set(0,.03,z);scene.add(line)}
+// buildings around the tiny street
+function block(x,z,w,d,h,color){let m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);let roof=new THREE.Mesh(new THREE.BoxGeometry(w+.2,.25,d+.2),mat(0x414b5c));roof.position.set(x,h+.12,z);scene.add(roof);for(let yy=1.5;yy<h-0.4;yy+=1.5)for(let xx=-w/2+1;xx<w/2-.4;xx+=1.5){let win=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.08),mat(0x9bd9e8));win.position.set(x+xx,yy,z-d/2-.045);scene.add(win)}}
+block(-13,-12,9,11,7,0xd6a77e);block(13,-12,9,11,8,0xd88e72);block(-13,12,9,10,6,0xd4c18f);block(13,12,9,10,7,0xb9a4d2);
+function crate(x,z){let m=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.5,1.8),mat(0x9a6336));m.position.set(x,.75,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);let a=new THREE.Mesh(new THREE.BoxGeometry(1.9,.13,.13),mat(0xe2b778));a.position.set(x,.75,z);scene.add(a)}
+[[-5,-7],[5,-5],[-5,5],[5,8],[0,0],[-8,0],[8,0]].forEach(v=>crate(...v));
+function makePlayer(color,x,z){let g=new THREE.Group();scene.add(g);let body=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.65,4,8),mat(color));body.position.y=1.05;body.castShadow=true;g.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.36,16,12),mat(0xf0c6a5));head.position.y=1.85;head.castShadow=true;g.add(head);let hair=new THREE.Mesh(new THREE.SphereGeometry(.37,16,8,0,Math.PI*2,0,Math.PI/2),mat(0x33251f));hair.position.y=2.02;g.add(hair);let gun=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.85),mat(0x202936));gun.position.set(.34,1.25,-.48);g.add(gun);return g}
+let me=makePlayer(0x167eaa,-3,12),enemy=makePlayer(0xd83e79,3,-12);let my={x:-3,z:12,yaw:0,hp:100,ammo:30,score:0},other={x:3,z:-12,yaw:Math.PI,hp:100,ammo:30,score:0};
+let peer=null,conn=null,isHost=false,connected=false,soloPreview=false,keys={},mouse={x:0,y:0},lastShot=0,ammo=30,health=100,score=0,oppScore=0,remaining=180,gameStarted=false;
+let cameraYaw=0,cameraPitch=0.12,dragging=false,lastPointer={x:0,y:0};
+const colliders=[[-5,-7,1.2],[5,-5,1.2],[-5,5,1.2],[5,8,1.2],[0,0,1.2],[-8,0,1.2],[8,0,1.2]];
+function setStatus(s){status.textContent=s}
+function setupConn(c){conn=c;c.on('open',()=>{connected=true;gameStarted=true;setStatus('Bağlandı! Düello başladı.');msg.textContent='SAVAŞ BAŞLASIN!';setTimeout(()=>msg.textContent='',1800);document.getElementById('connect').style.display='none'});c.on('data',d=>{if(d.t==='state'){other.x=d.x;other.z=d.z;other.yaw=d.yaw;other.hp=d.hp;oppScore=d.score;document.getElementById('s2').textContent=oppScore;enemy.position.set(other.x,0,other.z);enemy.rotation.y=other.yaw}if(d.t==='hit'){health=Math.max(0,health-18);if(health===0){health=100;my.x=isHost?-3:3;my.z=isHost?12:-12;send({t:'point'})}}if(d.t==='point'){score++;document.getElementById('s1').textContent=score}});c.on('close',()=>{connected=false;setStatus('Bağlantı kesildi.')});c.on('error',e=>setStatus('Bağlantı hatası: '+e.type))}
+function send(d){if(conn&&conn.open)conn.send(d)}
+document.getElementById('solo').onclick=()=>{
+ soloPreview=true;gameStarted=true;
+ document.getElementById('connect').style.display='none';
+ msg.textContent='TEK KİŞİLİK DENEME';setTimeout(()=>msg.textContent='',1800);
+ setStatus('Tek kişilik deneme açık. WASD ile hareket et, fareyle kamerayı çevir.');
+};
+document.getElementById('host').onclick=()=>{if(!window.Peer){setStatus('Bağlantı kütüphanesi yüklenemedi. Sayfayı yenile.');return}isHost=true;peer=new Peer();setStatus('Oda hazırlanıyor...');peer.on('open',id=>{document.getElementById('hostInfo').style.display='block';document.getElementById('myid').value=id;setStatus('Kodunu sevgiline gönder. Katılması bekleniyor...')});peer.on('connection',c=>setupConn(c));peer.on('error',e=>setStatus('Oda hatası: '+e.type))};
+document.getElementById('copy').onclick=()=>{navigator.clipboard?.writeText(document.getElementById('myid').value);setStatus('Oda kodu kopyalandı.')};
+document.getElementById('join').onclick=()=>{let id=document.getElementById('peerid').value.trim();if(!id)return setStatus('Önce oda kodunu gir.');isHost=false;peer=new Peer();setStatus('Odaya bağlanılıyor...');peer.on('open',()=>setupConn(peer.connect(id,{reliable:true})));peer.on('error',e=>setStatus('Bağlantı hatası: '+e.type))};
+addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+renderer.domElement.addEventListener('click',()=>{
+ if(!(connected||soloPreview))return;
+ if(document.pointerLockElement!==renderer.domElement){
+   renderer.domElement.requestPointerLock?.();
+ }else if(connected){shoot()}
+});
+document.addEventListener('mousemove',e=>{
+ if(document.pointerLockElement===renderer.domElement){
+   cameraYaw+=e.movementX*0.0028;
+   cameraPitch=Math.max(-0.42,Math.min(0.72,cameraPitch+e.movementY*0.0022));
+ }
+});
+renderer.domElement.addEventListener('mousedown',e=>{if(e.button===2&&document.pointerLockElement!==renderer.domElement){dragging=true;lastPointer={x:e.clientX,y:e.clientY}}});
+addEventListener('mouseup',()=>dragging=false);
+addEventListener('mousemove',e=>{
+ if(dragging){
+   cameraYaw+=(e.clientX-lastPointer.x)*0.006;
+   cameraPitch=Math.max(-0.42,Math.min(0.72,cameraPitch+(e.clientY-lastPointer.y)*0.004));
+   lastPointer={x:e.clientX,y:e.clientY};
+ }
+});
+renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+document.getElementById('mobileFire').ontouchstart=e=>{e.preventDefault();if(connected)shoot()};
+document.querySelectorAll('[data-k]').forEach(b=>{let k=b.dataset.k;b.ontouchstart=e=>{e.preventDefault();keys[k]=true};b.ontouchend=e=>{e.preventDefault();keys[k]=false}});
+function shoot(){
+ if(!(connected||soloPreview))return;
+ const now=performance.now();
+ if(now-lastShot<260||ammo<=0)return;
+ lastShot=now;ammo--;
+ document.getElementById('ammo').textContent=ammo;
+ camera.updateMatrixWorld(true);
+ const raycaster=new THREE.Raycaster();
+ // Crosshair is 10% above center: NDC y = +0.2.
+ raycaster.setFromCamera(new THREE.Vector2(0,0.24),camera);
+ raycaster.far=45;
+ const hits=raycaster.intersectObjects(enemy.children,true);
+ const targetPoint=raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(45));
+ let hitEnemy=false;
+ if(hits.length){targetPoint.copy(hits[0].point);hitEnemy=true;}
+ const origin=new THREE.Vector3(my.x,1.35,my.z);
+ const beam=new THREE.Line(new THREE.BufferGeometry().setFromPoints([origin,targetPoint]),new THREE.LineBasicMaterial({color:0xffe08a}));
+ scene.add(beam);
+ setTimeout(()=>{scene.remove(beam);beam.geometry.dispose();beam.material.dispose()},100);
+ if(soloPreview){
+   msg.textContent=hitEnemy?'HEDEF VURULDU!':'ATEŞ!';
+   setTimeout(()=>{if(soloPreview)msg.textContent=''},350);
+ }
+ if(connected&&hitEnemy)send({t:'hit'});
+}
+function move(){let speed=keys['shift']?.16:.105;let f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0);let angle=cameraYaw;my.x+=Math.sin(angle)*f*speed+Math.cos(angle)*r*speed;my.z-=Math.cos(angle)*f*speed-Math.sin(angle)*r*speed;my.x=Math.max(-9,Math.min(9,my.x));my.z=Math.max(-22,Math.min(22,my.z));
+my.yaw=cameraYaw;
+me.position.set(my.x,0,my.z);me.rotation.y=my.yaw;
+}
+let last=performance.now();function animate(t){requestAnimationFrame(animate);let dt=Math.min(.05,(t-last)/1000);last=t;if(connected||soloPreview){move();if(connected)send({t:'state',x:my.x,z:my.z,yaw:my.yaw,hp:health,score});remaining=Math.max(0,remaining-dt);let mm=Math.floor(remaining/60),ss=Math.floor(remaining%60);document.getElementById('clock').innerHTML=mm+':'+String(ss).padStart(2,'0')+'<br>DUELLO'}else{me.rotation.y+=0}
+let distance=5,flat=Math.cos(cameraPitch);let camOffset=new THREE.Vector3(Math.sin(cameraYaw)*distance*flat,2.0+Math.sin(cameraPitch)*distance,Math.cos(cameraYaw)*distance*flat);camera.position.lerp(new THREE.Vector3(my.x+camOffset.x,camOffset.y,my.z+camOffset.z),.18);camera.lookAt(my.x,1.35,my.z);document.getElementById('hp').textContent=health;document.getElementById('health').style.width=health+'%';renderer.render(scene,camera)}
+requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+})();
+</script>
+</body></html>
