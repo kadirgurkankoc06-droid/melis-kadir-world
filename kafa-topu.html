@@ -74,7 +74,7 @@ if(ball.y-ball.r<15){ball.y=15+ball.r;ball.vy=Math.abs(ball.vy)*.8;}
 // side walls except goal mouth
 if(ball.x-ball.r<10&&!(ball.y>ground-145)){ball.x=10+ball.r;ball.vx=Math.abs(ball.vx)*.8;}if(ball.x+ball.r>W-10&&!(ball.y>ground-145)){ball.x=W-10-ball.r;ball.vx=-Math.abs(ball.vx)*.8;}
 // goals, 0-145 high
-if(ball.x<40&&ball.y>ground-145){score1++;goal('Melis gol attı! 💜');}else if(ball.x>W-40&&ball.y>ground-145){score2++;goal('Kadir gol attı! ⚡');}
+if(ball.x<40&&ball.y>ground-145){score2++;goal('Kadir gol attı! ⚡');}else if(ball.x>W-40&&ball.y>ground-145){score1++;goal('Melis gol attı! 💜');}
 $('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;
 }
 function goal(msg){$('s1').textContent=score1;$('s2').textContent=score2;$('message').textContent=msg;goalFlash=1;resetPositions();if(score1>=5||score2>=5){ended=true;$('message').textContent=score1>score2?'Melis maçı kazandı! 💜🏆':'Kadir maçı kazandı! ⚡🏆';}}
