@@ -62,7 +62,8 @@ fetch('https://cdn.jsdelivr.net/gh/theaiagent/turkiye_iller_geojson@main/turkiye
      style:provinceStyle,
      onEachFeature:(feature,layer)=>{
        const name=provinceName(feature);
-       layer.on('click',()=>{\n         if(map.closePopup)map.closePopup();
+       layer.on('click',()=>{
+         if(map.closePopup)map.closePopup();
          const wasVisited=visitedProvinces.includes(name);
          if(wasVisited) visitedProvinces=visitedProvinces.filter(x=>x!==name);
          else visitedProvinces.push(name);
