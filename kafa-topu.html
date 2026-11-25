@@ -28,16 +28,33 @@ function player(x,name,color,hair,dir){return{x,y:ground,vx:0,vy:0,r:32,name,col
 function resetPositions(){p1=player(570,'MELİS','#a78bfa','#39246f',-1);p2=player(430,'KADİR','#41d9df','#172e55',1);ball={x:W/2,y:ground-70,vx:0,vy:0,r:22};}
 function newGame(){score1=score2=0;time=90;paused=false;ended=false;goalFlash=0;resetPositions();$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent='01:30';$('message').textContent='Maç başladı! Topa yaklaş ve şut tuşuna bas.';$('pause').textContent='⏸ Duraklat';}
 function down(k){return !!keys[k] || (onlineRole==='host' && !!remoteKeys[k])}
+
+function collideBallWithPlayer(p){
+ // Oyuncu gövdesi ile kafa, dikey kapsül olarak ele alınır.
+ const ax=p.x, ay=p.y-78, by=p.y-27;
+ const qy=Math.max(ay,Math.min(by,ball.y));
+ let dx=ball.x-ax,dy=ball.y-qy,dist=Math.hypot(dx,dy);
+ const min=ball.r+29;
+ if(dist<min){
+   if(dist<0.001){dx=p.dir||1;dy=0;dist=1;}
+   const nx=dx/dist,ny=dy/dist;
+   ball.x=ax+nx*min;ball.y=qy+ny*min;
+   // Temasta top dursun; oyuncunun içine veya arkasına geçmesine izin verme.
+   ball.vx=0;ball.vy=0;
+ }
+}
 function physics(dt){if(onlineRole==='guest')return;if(paused||ended)return;const step=Math.min(dt,0.03)*60;time-=dt;if(time<=0){time=0;ended=true;$('message').textContent=score1===score2?'Berabere! Rövanş zamanı.':score1>score2?'Melis kazandı! 💜🏆':'Kadir kazandı! ⚡🏆';}
 const gravity=.52;
 for(const [p,left,right,jump,shot] of [[p1,'a','d','w','f'],[p2,'ArrowLeft','ArrowRight','ArrowUp','l']]){
  p.cool=Math.max(0,p.cool-dt);let ax=0;if(down(left))ax=-.72;if(down(right))ax=.72;p.vx+=ax*step;p.vx*=Math.pow(.84,step);p.vx=Math.max(-7,Math.min(7,p.vx));p.x+=p.vx*step;p.x=Math.max(55,Math.min(W-55,p.x));
  if(down(jump)&&p.onGround){p.vy=-12.7;p.onGround=false;}p.vy+=gravity*step;p.y+=p.vy*step;if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true;}
  if(down(shot)&&p.cool<=0){const dx=ball.x-p.x,dy=ball.y-(p.y-78),dist=Math.hypot(dx,dy);if(dist<125){let dir=dx===0?p.dir:Math.sign(dx);ball.vx+=dir*12+p.vx*.65;ball.vy-=10.5;p.cool=.32;}}
- // head collision
- const dx=ball.x-p.x,dy=ball.y-(p.y-78),dist=Math.hypot(dx,dy),min=ball.r+25;if(dist<min&&dist>0){const nx=dx/dist,ny=dy/dist;ball.x=p.x+nx*min;ball.y=p.y-78+ny*min;ball.vx+=nx*3.2+p.vx*.5;ball.vy+=ny*2.8-1.8;}
+ // Karakterin tamamı için kapsül çarpışması: kafa + gövde. Top içinden geçemez.
+ collideBallWithPlayer(p);
 }
 ball.vy+=gravity*.9*step;ball.x+=ball.vx*step;ball.y+=ball.vy*step;ball.vx*=Math.pow(.994,step);ball.vy*=Math.pow(.997,step);
+// Hareketten sonra da kontrol et: hızlı topun bir karede karakterin içinden tünellemesini önler.
+collideBallWithPlayer(p1);collideBallWithPlayer(p2);
 if(ball.y+ball.r>ground){ball.y=ground-ball.r;ball.vy*=-.68;if(Math.abs(ball.vy)<1.2)ball.vy=0;ball.vx*=.985;}
 if(ball.y-ball.r<15){ball.y=15+ball.r;ball.vy=Math.abs(ball.vy)*.8;}
 // side walls except goal mouth
