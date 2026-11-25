@@ -52,7 +52,7 @@ let provinceLayer=null;
 const PROVINCE_STORE='mkw_visited_provinces_v1';
 let visitedProvinces=[];try{visitedProvinces=JSON.parse(localStorage.getItem(PROVINCE_STORE)||'[]')}catch(e){visitedProvinces=[]}
 function provinceName(feature){const p=feature.properties||{};return p.il_adi||p.name||p.Name||p.NAME_1||p.il||p.İL||'İsimsiz il'}
-function provinceStyle(feature){const name=provinceName(feature);const done=visitedProvinces.includes(name);return {color:done?'#00ff78':'#f4d58a',weight:done?3.2:1.25,opacity:1,fillColor:done?'#00e676':'#f4d58a',fillOpacity:done?.48:.025}}
+function provinceStyle(feature){const name=provinceName(feature);const done=visitedProvinces.includes(name);return {color:done?'#19d8d0':'#f4d58a',weight:done?3:1.25,opacity:1,fillColor:'#f4d58a',fillOpacity:.015,dashArray:done?null:'2 3'}}
 function updateProvinceProgress(){const count=visitedProvinces.length;$('provinceVisitedCount').textContent=count;$('provinceProgressBar').style.width=(count/81*100)+'%';$('provinceVisitedNames').textContent=count?('Gezdiğimiz iller: '+visitedProvinces.slice().sort((a,b)=>a.localeCompare(b,'tr')).join(' · ')):'Henüz il işaretlemedik.'}
 window.toggleProvince=name=>{if(visitedProvinces.includes(name))visitedProvinces=visitedProvinces.filter(x=>x!==name);else visitedProvinces.push(name);try{localStorage.setItem(PROVINCE_STORE,JSON.stringify(visitedProvinces))}catch(e){}if(provinceLayer)provinceLayer.setStyle(provinceStyle);updateProvinceProgress();};
 fetch('https://cdn.jsdelivr.net/gh/theaiagent/turkiye_iller_geojson@main/turkiye_iller.geojson')
@@ -72,7 +72,7 @@ fetch('https://cdn.jsdelivr.net/gh/theaiagent/turkiye_iller_geojson@main/turkiye
          const status=wasVisited?'Gezildi işareti kaldırıldı.':'Gezdiğimiz il olarak kaydedildi!';
          layer.bindPopup(`<div style="min-width:150px"><b>${escapeHtml(name)}</b><p style="margin:6px 0;color:#9baac0;font-size:12px">${status}</p><small>Değiştirmek için ile tekrar tıkla.</small></div>`).openPopup();
        });
-       layer.on({mouseover:e=>{if(!visitedProvinces.includes(name))e.target.setStyle({weight:2.2,color:'#ffffff',fillOpacity:.10})},mouseout:e=>provinceLayer.resetStyle(e.target)});
+       layer.on({mouseover:e=>{if(!visitedProvinces.includes(name))e.target.setStyle({weight:2,color:'#ffffff',fillOpacity:.035})},mouseout:e=>provinceLayer.resetStyle(e.target)});
      }
    }).addTo(map);
    updateProvinceProgress();
