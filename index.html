@@ -39,5 +39,22 @@ function showSearchResults(results){const box=$('searchResults');box.innerHTML='
 $('locationSearch').addEventListener('submit',async e=>{e.preventDefault();const q=$('locationQuery').value.trim();if(!q){$('searchStatus').textContent='Önce bir yer adı yaz.';return}$('searchStatus').textContent='Konum aranıyor…';$('searchResults').innerHTML='';selectedSearchPoint=null;if(searchPreview){map.removeLayer(searchPreview);searchPreview=null}try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&q='+encodeURIComponent(q);const res=await fetch(url,{headers:{'Accept':'application/json'}});if(!res.ok)throw new Error('search');const results=await res.json();if(!results.length){$('searchStatus').textContent='Bu isimle bir yer bulunamadı. Daha açık yazmayı dene.';return}const formatted=results.map(r=>({...r,name:r.name||q}));$('searchStatus').textContent='Bir sonuç seç. Haritada yerini kontrol et; henüz hiçbir şey kaydedilmedi.';showSearchResults(formatted)}catch(err){$('searchStatus').textContent='Arama şu an yapılamadı. İnternet bağlantını kontrol edip tekrar dene.'}});
 $('closeModal').onclick=$('cancelModal').onclick=closeModal;$('modalBack').addEventListener('click',e=>{if(e.target===$('modalBack'))closeModal()});
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));$(b.dataset.page).classList.add('active');if(b.dataset.page==='mapPage')setTimeout(()=>map.invalidateSize(),100)});
-map=L.map('map',{worldCopyJump:true}).setView([25,10],2);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);draw();
+map=L.map('map',{worldCopyJump:true}).setView([25,10],2);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+// Türkiye'nin 81 il sınırlarını haritaya ayrı bir katman olarak ekle.
+let provinceLayer=null;
+fetch('https://cdn.jsdelivr.net/gh/theaiagent/turkiye_iller_geojson@main/turkiye_iller.geojson')
+ .then(r=>{if(!r.ok)throw new Error('İl sınırları yüklenemedi');return r.json()})
+ .then(data=>{
+   provinceLayer=L.geoJSON(data,{
+     style:()=>({color:'#f4d58a',weight:1.6,opacity:.9,fillColor:'#f4d58a',fillOpacity:.035}),
+     onEachFeature:(feature,layer)=>{
+       const name=feature.properties?.il_adi||feature.properties?.name||feature.properties?.Name;
+       if(name)layer.bindTooltip(name,{permanent:true,direction:'center',className:'province-label',opacity:.9});
+       layer.on({mouseover:e=>e.target.setStyle({weight:2.8,color:'#ffffff',fillOpacity:.12}),mouseout:e=>provinceLayer.resetStyle(e.target)});
+     }
+   }).addTo(map);
+   const updateProvinceLabels=()=>provinceLayer.eachLayer(layer=>{const tip=layer.getTooltip();if(!tip)return;const el=tip.getElement();if(el)el.style.display=map.getZoom()>=6?'':'none'});
+   map.on('zoomend',updateProvinceLabels);updateProvinceLabels();
+ }).catch(err=>console.warn(err));
+draw();
 </script></body></html>
