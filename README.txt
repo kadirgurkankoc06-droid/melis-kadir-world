@@ -10,3 +10,4 @@ GitHub Pages'e yükleme:
 
 Not: Harita OpenStreetMap katmanlarını, Leaflet kütüphanesini internetten yükler.
 Bu ilk sürümde konumlar ve fotoğraflar yalnızca ekleme yapılan tarayıcıda localStorage içinde saklanır. Farklı cihazlarda ortak görünmesi için sonraki aşamada çevrim içi veritabanı ve dosya depolama hizmeti bağlanmalıdır.
+\nKafa Topu: kafa-topu.html dosyası. Oyun içinde Telefon ve PC modları seçilebilir. Melis karakteri mor renktedir.\n
