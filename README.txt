@@ -1,13 +1,21 @@
 MELIS & KADIR WORLD
 
 GitHub Pages'e yükleme:
-1. Bu klasörün içindeki index.html, game.html, README.txt ve robots.txt dosyalarını deponun ana dizinine yükleyin.
-2. Commit changes ile kaydedin.
-3. GitHub deposu > Settings > Pages bölümüne gidin.
-4. Build and deployment altında Deploy from a branch seçin.
-5. Branch: main (veya ana), Folder: / (root) seçip Save'e basın.
-6. Yayın adresi birkaç dakika içinde oluşur.
+1. ZIP dosyasını bilgisayarında çıkar.
+2. İçindeki index.html, game.html, kafa-topu.html, README.txt, robots.txt, melis-avatar.png ve kadir-avatar.png dosyalarını GitHub deposunun ana dizinine yükle.
+3. Aynı adlı dosyalar sorulursa üzerine yazmayı seç.
+4. Commit changes ile kaydet.
+5. Yayın adresini açıp Ctrl+F5 yap.
 
-Not: Harita OpenStreetMap katmanlarını, Leaflet kütüphanesini internetten yükler.
-Bu ilk sürümde konumlar ve fotoğraflar yalnızca ekleme yapılan tarayıcıda localStorage içinde saklanır. Farklı cihazlarda ortak görünmesi için sonraki aşamada çevrim içi veritabanı ve dosya depolama hizmeti bağlanmalıdır.
-\nKafa Topu: kafa-topu.html dosyası. Oyun içinde Telefon ve PC modları seçilebilir. Melis karakteri mor renktedir.\n
+Ortak anılar / Supabase:
+- Dünya haritası, gezilen yerler, istek listesi, il işaretleri ve fotoğraflar Supabase üzerinden ortak tutulur.
+- Herkes siteyi giriş yapmadan görüntüleyebilir.
+- Yer ve fotoğraf ekleme/düzenleme için yalnızca Supabase'de oluşturulmuş Kadir hesabıyla giriş yapılır.
+- Sitedeki Giriş yap düğmesine basıp Supabase Auth kullanıcısının e-posta ve şifresini gir.
+- Tarayıcıya yalnızca Supabase publishable anahtarı eklenmiştir. Secret/service_role anahtarını GitHub'a veya site dosyalarına koyma.
+- Storage bucket: world-photos (public read, yalnızca Kadir kullanıcısına upload).
+- Database table: public.world_data (id=1, data JSONB).
+
+Not: İlk kez Kadir hesabıyla giriş yapıldığında bu bilgisayarda localStorage'da bulunan eski konumlar ortak veritabanına aktarılır. Fotoğraflar Storage'a yüklenir.
+
+Kafa Topu: kafa-topu.html dosyası. Oyun içinde Telefon ve PC modları seçilebilir. Melis karakteri mor renktedir.
