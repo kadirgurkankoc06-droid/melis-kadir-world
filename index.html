@@ -93,6 +93,9 @@ function updateAuthUI(){
  $('addVisited').style.opacity=$('addWish').style.opacity=currentUser?'1':'.48';
  $('placePhotos').disabled=!currentUser;
  $('placePhotos').parentElement.querySelector('.note').textContent=currentUser?'Fotoğraflar güvenli şekilde ortak albüme yüklenir.':'Fotoğraf eklemek için Kadir hesabıyla giriş yapmalısın.';
+ // Oturum değişince mevcut harita işaretlerinin popup'larını yeniden oluştur;
+ // böylece girişten önce çizilmiş eski konumlarda da yönetim düğmeleri görünür.
+ if(map) draw();
 }
 function showLogin(){ $('loginError').textContent='';$('loginBack').classList.add('open'); }
 $('authButton').addEventListener('click',async()=>{if(currentUser){await cloud.auth.signOut();return}showLogin()});
