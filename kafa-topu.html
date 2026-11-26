@@ -238,6 +238,7 @@ for(const [playerIndex,p,left,right,jump,shot] of [[0,p1,'a','d','w','f'],[1,p2,
  // Karakterin tamamı için kapsül çarpışması: kafa + gövde. Top içinden geçemez.
  collideBallWithPlayer(p);
 }
+const previousBallX=ball.x;
 ball.vy+=gravity*.9*step;ball.x+=ball.vx*step;ball.y+=ball.vy*step;ball.vx*=Math.pow(.9975,step);ball.vy*=Math.pow(.999,step);
 // Hareketten sonra da kontrol et: hızlı topun bir karede karakterin içinden tünellemesini önler.
 collideBallWithPlayer(p1);collideBallWithPlayer(p2);
@@ -262,13 +263,18 @@ collideBallSegment(W-98,goalY,W-8,goalY);
 // Ön dikmelerin üst birleşim noktaları (topun dikmeye sürtüp içeri ışınlanmasını önler).
 function collidePost(cx,cy){const dx=ball.x-cx,dy=ball.y-cy,d=Math.hypot(dx,dy),min=ball.r+postR;if(d>=min)return;const nx=d<.001?1:dx/d,ny=d<.001?0:dy/d;ball.x=cx+nx*min;ball.y=cy+ny*min;const vn=ball.vx*nx+ball.vy*ny;if(vn<0){ball.vx-=(1+restitution)*vn*nx;ball.vy-=(1+restitution)*vn*ny;}}
 collidePost(98,goalY);collidePost(W-98,goalY);
-// Kale ağının arka dikmeleri: top kale hacmine girdikten sonra ağın gerisinden çıkamaz.
-if(ball.x-ball.r<8&&ball.y>goalY+ball.r&&ball.y<ground-ball.r){ball.x=8+ball.r;if(ball.vx<0)ball.vx=Math.abs(ball.vx)*.35;ball.vy*=.82;}
-if(ball.x+ball.r>W-8&&ball.y>goalY+ball.r&&ball.y<ground-ball.r){ball.x=W-8-ball.r;if(ball.vx>0)ball.vx=-Math.abs(ball.vx)*.35;ball.vy*=.82;}
-// Gol yalnızca top ön çizgiyi bütünüyle geçtiğinde ve kale açıklığının içinde kaldığında verilir.
+// Gol kontrolü: yalnızca saha tarafından kale içine doğru çizgi geçişinde gol ver.
+// Kaleden sahaya doğru çıkan top tekrar gol sayılmaz.
 const goalTop=goalY+ball.r+postR,goalBottom=ground-ball.r-2;
-if(ball.x+ball.r<98&&ball.y>goalTop&&ball.y<goalBottom){score2++;goal('Kadir gol attı! ⚡');}
-else if(ball.x-ball.r>W-98&&ball.y>goalTop&&ball.y<goalBottom){score1++;goal('Melis gol attı! 💜');}
+const insideGoalMouth=ball.y>goalTop&&ball.y<goalBottom;
+if(insideGoalMouth&&previousBallX>=98&&ball.x<98){score2++;goal('Kadir gol attı! ⚡');return;}
+if(insideGoalMouth&&previousBallX<=W-98&&ball.x>W-98){score1++;goal('Melis gol attı! 💜');return;}
+// Kale ağının arka sınırı: gol geçişi olmayan toplar oyun alanından kaybolamaz.
+if(ball.x-ball.r<8&&ball.y>goalY+ball.r&&ball.y<ground-ball.r){ball.x=8+ball.r;if(ball.vx<0)ball.vx=Math.abs(ball.vx)*.55;ball.vy*=.9;}
+if(ball.x+ball.r>W-8&&ball.y>goalY+ball.r&&ball.y<ground-ball.r){ball.x=W-8-ball.r;if(ball.vx>0)ball.vx=-Math.abs(ball.vx)*.55;ball.vy*=.9;}
+// Saha sınırları: hatalı fizik adımlarında top ekran dışına kaçmasın.
+if(ball.x-ball.r<0){ball.x=ball.r;if(ball.vx<0)ball.vx=Math.abs(ball.vx)*.5;}
+if(ball.x+ball.r>W){ball.x=W-ball.r;if(ball.vx>0)ball.vx=-Math.abs(ball.vx)*.5;}
 $('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;
 }
 function goal(msg){$('s1').textContent=score1;$('s2').textContent=score2;$('message').textContent=msg;goalFlash=1;resetPositions();if(score1>=5||score2>=5){ended=true;showMatchEnd();$('message').textContent=score1>score2?'Melis maçı kazandı! 💜🏆':'Kadir maçı kazandı! ⚡🏆';}if(onlineRole==='host'&&onlineConnected)sendOnline('state',packState());}
