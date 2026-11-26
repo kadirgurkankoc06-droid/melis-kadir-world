@@ -86,52 +86,51 @@
  body.online-playing .stage canvas{width:100%!important;height:100%!important;object-fit:contain!important}
 }
 
-/* Yatay telefonda konsol tipi kontrol: sol başparmak hareket, sağ başparmak şut */
-@media (pointer:coarse) and (orientation:landscape){
- body.online-playing.online-host .controls,
- body.online-playing.online-guest .controls{
-   position:fixed!important;inset:auto 0 0 0!important;
-   width:100vw!important;max-width:100vw!important;
-   height:0!important;min-height:0!important;
-   margin:0!important;padding:0!important;
-   display:block!important;z-index:80!important;
-   pointer-events:none!important;background:transparent!important;
+
+/* MOBİL YATAY MAÇ: sol tarafta hareket, sağ tarafta şut.
+   Orientation-only media query: Android tarayıcılarında pointer tipi farklı olsa da çalışır. */
+@media (orientation:landscape) and (max-height:700px){
+ body.online-playing .wrap .controls{
+   position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;
+   max-width:none!important;margin:0!important;padding:0!important;z-index:999!important;
+   display:block!important;pointer-events:none!important;background:transparent!important;
  }
- body.online-playing.online-host .controls .control-card:not([hidden]),
- body.online-playing.online-guest .controls .control-card:not([hidden]){
-   position:static!important;width:100%!important;max-width:none!important;
-   height:0!important;min-height:0!important;margin:0!important;padding:0!important;
-   border:0!important;box-shadow:none!important;background:transparent!important;
-   pointer-events:none!important;
+ body.online-playing .wrap .controls .control-card{
+   position:static!important;width:100%!important;height:0!important;max-width:none!important;
+   margin:0!important;padding:0!important;border:0!important;background:transparent!important;
+   box-shadow:none!important;pointer-events:none!important;
  }
- body.online-playing .controls .control-card .touch{
-   position:fixed!important;inset:auto 0 0 0!important;
-   display:block!important;width:100vw!important;height:0!important;
+ body.online-playing .wrap .controls .control-card[hidden],
+ body.online-playing.online-host .wrap .controls .control-card:last-child,
+ body.online-playing.online-guest .wrap .controls .control-card:first-child{display:none!important}
+ body.online-playing .wrap .controls .control-card h3,
+ body.online-playing .wrap .controls .control-card .keys{display:none!important}
+ body.online-playing .wrap .controls .control-card .touch{
+   position:static!important;display:block!important;width:100%!important;height:0!important;
    margin:0!important;padding:0!important;pointer-events:none!important;
  }
- body.online-playing .controls .control-card .touch button{
-   position:fixed!important;bottom:max(15px,env(safe-area-inset-bottom))!important;
-   width:clamp(56px,8.8vw,82px)!important;
-   height:clamp(56px,12vh,78px)!important;
-   min-height:0!important;
-   margin:0!important;padding:0!important;
-   border-radius:18px!important;
-   background:rgba(18,32,55,.85)!important;
-   border:1px solid rgba(180,210,255,.45)!important;
-   box-shadow:0 3px 12px #0006!important;
-   font-size:clamp(22px,4vw,30px)!important;
-   pointer-events:auto!important;
+ body.online-playing .wrap .controls .control-card .touch button{
+   position:fixed!important;bottom:max(14px,env(safe-area-inset-bottom))!important;
+   display:flex!important;align-items:center!important;justify-content:center!important;
+   width:clamp(54px,9vw,76px)!important;height:clamp(54px,12vh,72px)!important;
+   min-height:0!important;max-width:none!important;margin:0!important;padding:0!important;
+   border-radius:16px!important;background:rgba(20,35,58,.94)!important;
+   border:1px solid rgba(190,210,245,.5)!important;box-shadow:0 3px 12px #0008!important;
+   font-size:clamp(22px,3vw,29px)!important;line-height:1!important;
+   pointer-events:auto!important;touch-action:none!important;
+   user-select:none!important;-webkit-user-select:none!important;
  }
- body.online-playing .controls .control-card .touch button:nth-child(1){left:max(12px,env(safe-area-inset-left))!important;right:auto!important}
- body.online-playing .controls .control-card .touch button:nth-child(2){left:calc(max(12px,env(safe-area-inset-left)) + clamp(56px,8.8vw,82px) + 8px)!important;right:auto!important}
- body.online-playing .controls .control-card .touch button:nth-child(3){left:calc(max(12px,env(safe-area-inset-left)) + (clamp(56px,8.8vw,82px) + 8px)*2)!important;right:auto!important}
- body.online-playing .controls .control-card .touch button:nth-child(4){
+ /* Sol başparmak: geri, zıpla, ileri */
+ body.online-playing .wrap .controls .control-card .touch button:nth-child(1){left:max(14px,env(safe-area-inset-left))!important;right:auto!important}
+ body.online-playing .wrap .controls .control-card .touch button:nth-child(2){left:calc(max(14px,env(safe-area-inset-left)) + clamp(54px,9vw,76px) + 9px)!important;right:auto!important}
+ body.online-playing .wrap .controls .control-card .touch button:nth-child(3){left:calc(max(14px,env(safe-area-inset-left)) + 2 * (clamp(54px,9vw,76px) + 9px))!important;right:auto!important}
+ /* Sağ başparmak: şut */
+ body.online-playing .wrap .controls .control-card .touch button:nth-child(4){
    left:auto!important;right:max(18px,env(safe-area-inset-right))!important;
-   width:clamp(68px,11vw,100px)!important;
-   height:clamp(68px,16vh,94px)!important;
-   border-radius:50%!important;
-   background:linear-gradient(135deg,#8367ef,#3b83f4)!important;
-   box-shadow:0 4px 18px #0008!important;
+   bottom:max(14px,env(safe-area-inset-bottom))!important;
+   width:clamp(68px,11vw,92px)!important;height:clamp(68px,15vh,88px)!important;
+   border-radius:50%!important;background:linear-gradient(135deg,#8066ed,#4386f5)!important;
+   border:2px solid rgba(255,255,255,.55)!important;
  }
 }
 </style></head><body><div id="rotateNotice"><div class="noticeCard"><span class="rotateIcon">📱↻</span><h2>Telefonu yatay çevir</h2><p>Kafa Topu'nu daha geniş saha ve rahat kontrol tuşlarıyla oynamak için telefonu yatay konuma getir.</p><button type="button" id="landscapeBtn">Tam ekran dene</button></div></div><main class="wrap"><header class="top"><div class="brand">MELİS & KADİR WORLD<small>PLAY · EXPLORE · REMEMBER</small></div><a class="back" href="index.html">← Siteye dön</a></header><section class="hero"><h1>⚽ MELİS <span style="color:#ffd36a">VS</span> KADİR</h1><p>İki kişilik kafa topu mücadelesi. Bakalım kim kazanacak?</p></section>
