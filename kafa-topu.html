@@ -175,7 +175,7 @@ const supabaseClient=window.supabase?.createClient?window.supabase.createClient(
 let selectedCharacter=null,hostCharacter='MELİS',guestCharacter='KADİR',characterConfirmed=false;
 let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSend=0,onlineConnected=false,opponentJoined=false,remoteTarget=null,rematchRequested=false,guestRematchRequested=false,ballSnapshots=[],playerSnapshots=[];
 // WebRTC oyun veri kanalı: Supabase yalnızca oda eşleştirme ve bağlantı sinyalleşmesi için kullanılır.
-let rtcPeer=null,rtcData=null,rtcStateData=null,rtcPendingCandidates=[],rtcReady=false,rtcStarting=false,rtcStateSeq=0,lastRtcStateSeq=-1;
+let rtcPeer=null,rtcData=null,rtcStateData=null,rtcPendingCandidates=[],rtcReady=false,rtcStarting=false,rtcStateSeq=0,lastRtcStateSeq=-1,rtcInputSeq=0,lastRtcInputSeq=-1;
 const rtcConfig={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
 const c=document.getElementById('game');
 // Tuvalin iç çözünürlüğünü oyun koordinatlarıyla birebir tut.
@@ -299,20 +299,22 @@ function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;if(onl
 function sendSignal(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
 function rtcIsOpen(){return !!(rtcData&&rtcData.readyState==='open'&&rtcStateData&&rtcStateData.readyState==='open');}
 function sendOnline(event,payload){
- // Tuşlar güvenilir/sıralı kanaldan; sık değişen oyun durumu kayıpsızlık beklemeden ayrı kanaldan gider.
+ // Tuş paketleri de tam tuş durumunu taşır; eski paketlerin sırayla beklemesi yerine en günceli kullanılır.
  if(event==='input'&&rtcData&&rtcData.readyState==='open'){
-  try{rtcData.send(JSON.stringify({event,payload}));return;}catch(e){}
+  // Kuyruk büyürse eski tuş durumunu biriktirme. 100 ms yedek gönderim güncel durumu tekrar iletir.
+  if(rtcData.bufferedAmount>4096)return;
+  try{rtcData.send(JSON.stringify({event,payload,seq:++rtcInputSeq}));return;}catch(e){}
  }
  if(event==='state'&&rtcStateData&&rtcStateData.readyState==='open'){
-  // Geride kalan durum paketlerini kuyruğa yığma; sonraki kare daha güncel konumu taşıyacak.
-  if(rtcStateData.bufferedAmount>24000)return;
+  // Eski pozisyonları kuyruğa yığma; sıradaki paket daha güncel konumu taşır.
+  if(rtcStateData.bufferedAmount>8192)return;
   try{rtcStateData.send(JSON.stringify({event,payload,seq:++rtcStateSeq}));return;}catch(e){}
  }
  // WebRTC kurulana kadar veya ilgili kanal kapalıysa Supabase yedeği.
  sendSignal(event,payload);
 }
 function closeRtc(){
- rtcReady=false;rtcStarting=false;rtcPendingCandidates=[];rtcStateSeq=0;lastRtcStateSeq=-1;ballSnapshots=[];playerSnapshots=[];
+ rtcReady=false;rtcStarting=false;rtcPendingCandidates=[];rtcStateSeq=0;lastRtcStateSeq=-1;rtcInputSeq=0;lastRtcInputSeq=-1;ballSnapshots=[];playerSnapshots=[];
  try{if(rtcData){rtcData.onopen=rtcData.onclose=rtcData.onmessage=null;rtcData.close();}}catch(e){}
  try{if(rtcStateData){rtcStateData.onopen=rtcStateData.onclose=rtcStateData.onmessage=null;rtcStateData.close();}}catch(e){}
  try{if(rtcPeer){rtcPeer.onicecandidate=rtcPeer.ondatachannel=rtcPeer.onconnectionstatechange=null;rtcPeer.close();}}catch(e){}
@@ -327,7 +329,11 @@ function attachRtcDataChannel(channel){
  channel.onerror=()=>{if(isState)rtcReady=false;};
  channel.onmessage=ev=>{
   let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
-  if(msg.event==='input'&&onlineRole==='host'&&msg.payload?.keys)remoteKeys=msg.payload.keys;
+  if(msg.event==='input'&&onlineRole==='host'&&msg.payload?.keys){
+   // Sırasız kanalda gecikmiş tuş paketlerini at; en son tuş durumu geçerli olsun.
+   if(Number.isFinite(msg.seq)){if(msg.seq<=lastRtcInputSeq)return;lastRtcInputSeq=msg.seq;}
+   remoteKeys=msg.payload.keys;
+  }
   if(msg.event==='state'&&onlineRole==='guest'){
    // Sırasız kanalda gecikmiş eski paketleri at; yalnızca en yeni oyun durumunu uygula.
    if(Number.isFinite(msg.seq)){if(msg.seq<=lastRtcStateSeq)return;lastRtcStateSeq=msg.seq;}
@@ -358,7 +364,8 @@ async function startHostRtc(){
  rtcStarting=true;
  try{
   const pc=createRtcPeer();
-  attachRtcDataChannel(pc.createDataChannel('mkw-input',{ordered:true}));
+  // Girişler tam tuş durumu taşıdığı için sırasız/kayıpsızlık zorunlu olmayan kanal: eski input beklemez.
+  attachRtcDataChannel(pc.createDataChannel('mkw-input',{ordered:false,maxRetransmits:0}));
   // Pozisyon paketleri eskidiklerinde tekrar gönderilmesin; güncel paket daha değerlidir.
   attachRtcDataChannel(pc.createDataChannel('mkw-state',{ordered:false,maxRetransmits:0}));
   const offer=await pc.createOffer();await pc.setLocalDescription(offer);
