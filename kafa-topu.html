@@ -5,42 +5,36 @@
 .below{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}.hint{font-size:13px;color:var(--muted);line-height:1.6}.actions{display:flex;gap:9px;flex-wrap:wrap}button{cursor:pointer;border:1px solid var(--line);background:#1a2941;color:white;padding:10px 15px;border-radius:11px;font-weight:800}button.primary{background:linear-gradient(120deg,#7669f5,#4b8dff);border:0}.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.control-card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:12px}.control-card h3{margin:0 0 8px;font-size:14px}.control-card:first-child h3{color:var(--purple)}.control-card:last-child h3{color:var(--cyan)}.keys{display:flex;gap:6px;flex-wrap:wrap}.key{border:1px solid #40516d;background:#1b2a42;border-radius:7px;padding:5px 9px;font-size:12px;font-weight:900}.touch{display:none;gap:6px;margin-top:9px}.touch button{flex:1;padding:12px 5px;touch-action:none}.foot{text-align:center;color:#7488a7;font-size:11px;margin:16px 0 5px}@media(max-width:650px){body{padding:10px}.controls{grid-template-columns:1fr}.touch{display:flex}.scorebar{padding:10px}.player{font-size:15px}.score{font-size:25px}}
 .online-panel{background:linear-gradient(135deg,#14243b,#101b2d);border:1px solid #3a5274;border-radius:15px;padding:14px;margin:0 0 12px}.online-title{font-weight:900;margin-bottom:10px}.online-actions{display:flex;gap:8px;flex-wrap:wrap}.online-actions input{flex:1;min-width:150px;background:#0b1728;color:#fff;border:1px solid #40516d;border-radius:10px;padding:10px 12px;font:inherit;text-transform:uppercase}.online-status{color:#b7c8df;font-size:13px;margin-top:10px;line-height:1.5}.room-code{margin-top:10px;color:#dce8ff}.room-code strong{font-size:22px;letter-spacing:3px;color:#ffd36a;margin:0 8px}.online-badge{display:inline-block;background:#123c36;color:#8af0c5;padding:4px 8px;border-radius:8px;font-size:12px;margin-left:6px}body.online-host .control-card:last-child{display:none}body.online-host .control-card:first-child{grid-column:1/-1}body.online-guest .control-card:first-child{display:none}body.online-guest .control-card{grid-column:1/-1}body.online-guest #pause,body.online-guest #restart{display:none}@media(max-width:650px){.online-actions>*{width:100%}.room-code strong{font-size:20px}}
 
-/* Mobil çevrim içi maç: yatay ve tam ekran düzen */
-#rotateNotice{display:none;position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 0,#253b61,#07101e 72%);color:#fff;align-items:center;justify-content:center;text-align:center;padding:28px}
+/* Mobil çevrim içi maç: gerçek tam ekran oyun yerleşimi */
+#rotateNotice{display:none;position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 0,#253b61,#07101e 72%);color:#fff;align-items:center;justify-content:center;text-align:center;padding:24px}
 #rotateNotice .noticeCard{max-width:340px;border:1px solid #52678a;background:#111d30;border-radius:22px;padding:26px;box-shadow:0 20px 70px #0009}
 #rotateNotice .rotateIcon{font-size:54px;display:block;margin-bottom:12px}
 #rotateNotice h2{font-size:22px;margin:0 0 8px}
 #rotateNotice p{color:#b8c8df;line-height:1.55;margin:0 0 18px}
-#rotateNotice button{background:linear-gradient(120deg,#7669f5,#4b8dff);border:0;padding:12px 18px}
-body.online-playing .hero,body.online-playing .modebar{display:none}
-body.online-playing .online-panel{padding:7px 10px;margin:0 0 6px}
-body.online-playing .online-title{display:none}
-body.online-playing .online-status{font-size:11px;margin-top:4px}
-body.online-playing .scorebar{padding:7px 14px}
-body.online-playing .below{margin:5px 0}
-body.online-playing .controls{margin-top:5px}
-@media(max-width:900px) and (orientation:portrait){
- #rotateNotice{display:flex}
-}
+#rotateNotice button{background:linear-gradient(120deg,#7669f5,#4b8dff);border:0;padding:13px 20px}
+@media(max-width:900px) and (orientation:portrait){#rotateNotice{display:flex}}
 @media(max-width:900px) and (orientation:landscape){
- body{padding:4px;min-height:100dvh}
- .wrap{max-width:none;width:100%}
- .top{margin-bottom:4px;gap:6px}
- .brand{font-size:12px}.brand small{font-size:8px}
- .back{padding:5px 8px;font-size:11px}
- body.online-playing .top{display:none}
- body.online-playing .online-panel{display:none}
- body.online-playing .scorebar{border-radius:10px 10px 0 0;padding:4px 10px}
- body.online-playing .stage{border-radius:0 0 10px 10px}
- body.online-playing canvas{width:100%;height:auto;max-height:55dvh;object-fit:contain}
- body.online-playing .below{font-size:11px}
- body.online-playing .controls{display:flex;justify-content:center;gap:10px}
- body.online-playing .control-card{padding:5px 8px;flex:1;max-width:360px}
- body.online-playing .control-card h3{margin:0 0 3px;font-size:11px}
- body.online-playing .touch{margin-top:3px;gap:4px}
- body.online-playing .touch button{min-height:34px;padding:4px;font-size:15px}
- body.online-playing .keys{display:none}
+ body{padding:0!important;margin:0;width:100%;height:100dvh;min-height:0;overflow:hidden}
+ body.online-playing .wrap{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;margin:0;padding:5px 8px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:4px}
+ body.online-playing .top,body.online-playing .hero,body.online-playing .modebar,body.online-playing .online-panel,body.online-playing .foot{display:none!important}
+ body.online-playing .scorebar{grid-row:1;min-height:34px;padding:3px 12px;border-radius:9px;gap:8px}
+ body.online-playing .player{font-size:clamp(11px,2.2vw,17px)}
+ body.online-playing .score{font-size:clamp(17px,3vw,24px)}
+ body.online-playing .timer{font-size:clamp(12px,2vw,17px)}
+ body.online-playing .stage{grid-row:2;min-height:0;height:100%;width:100%;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center}
+ body.online-playing canvas{width:100%;height:100%;max-height:100%;max-width:100%;object-fit:contain}
+ body.online-playing .below{grid-row:3;margin:0;min-height:0;display:flex;align-items:center;justify-content:space-between;gap:6px}
+ body.online-playing .hint{font-size:10px;line-height:1.2;max-width:45%;overflow:hidden}
+ body.online-playing .actions{display:none!important}
+ body.online-playing .controls{grid-row:4;position:fixed;left:0;right:0;bottom:0;margin:0;padding:0 8px 5px;display:flex;justify-content:center;gap:8px;pointer-events:none}
+ body.online-playing .control-card{pointer-events:auto;flex:1;max-width:48%;padding:3px 6px;margin:0;border-radius:9px;background:#101c2ddd}
+ body.online-playing .control-card h3{font-size:10px;margin:0 0 2px;text-align:center}
+ body.online-playing .touch{display:flex!important;gap:4px;margin:0}
+ body.online-playing .touch button{flex:1;min-width:0;min-height:clamp(30px,7vh,48px);padding:2px;font-size:clamp(14px,2.8vw,20px);border-radius:7px}
+ body.online-playing .keys{display:none!important}
+ body.online-playing .controls{height:auto}
 }
+
 
 </style></head><body><div id="rotateNotice"><div class="noticeCard"><span class="rotateIcon">📱↻</span><h2>Telefonu yatay çevir</h2><p>Kafa Topu'nu daha geniş saha ve rahat kontrol tuşlarıyla oynamak için telefonu yatay konuma getir.</p><button type="button" id="landscapeBtn">Tam ekran dene</button></div></div><main class="wrap"><header class="top"><div class="brand">MELİS & KADİR WORLD<small>PLAY · EXPLORE · REMEMBER</small></div><a class="back" href="index.html">← Siteye dön</a></header><section class="hero"><h1>⚽ MELİS <span style="color:#ffd36a">VS</span> KADİR</h1><p>İki kişilik kafa topu mücadelesi. Bakalım kim kazanacak?</p></section>
 <div class="modebar" role="group" aria-label="Oyun modu"><span>Nasıl oynayalım?</span><button type="button" id="phoneMode" class="modebtn">📱 Telefon</button><button type="button" id="pcMode" class="modebtn">💻 PC</button><small id="modeHint">Telefon modu: iki oyuncu ekrandaki tuşlarla oynar.</small></div>
@@ -173,7 +167,7 @@ function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=ts;physics(dt);
 window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();keys[k]=true;});window.addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;keys[k]=false;});document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();keys[k]=true},off=e=>{e.preventDefault();keys[k]=false};b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off));});function setMode(mode){document.body.classList.toggle('phone-mode',mode==='phone');document.body.classList.toggle('pc-mode',mode==='pc');$('phoneMode').classList.toggle('active',mode==='phone');$('pcMode').classList.toggle('active',mode==='pc');$('modeHint').textContent=mode==='phone'?'Telefon modu: çevrim içi maçta yalnızca kendi tuşların görünür.':'PC modu: klavye ile oynayın.';try{localStorage.setItem('mkw_headball_mode',mode)}catch(e){}}
 $('phoneMode').onclick=()=>setMode('phone');$('pcMode').onclick=()=>setMode('pc');
 let preferredMode='pc';try{preferredMode=localStorage.getItem('mkw_headball_mode')||(matchMedia('(max-width: 700px), (pointer: coarse)').matches?'phone':'pc')}catch(e){}setMode(preferredMode);
-$('restart').onclick=()=>{if(onlineRole==='guest')return;newGame();if(onlineRole==='host')sendOnline('state',packState());};$('pause').onclick=()=>{if(ended||onlineRole==='guest')return;paused=!paused;$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';if(onlineRole==='host')sendOnline('state',packState());};$('landscapeBtn').onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();if(screen.orientation?.lock)await screen.orientation.lock('landscape');}catch(e){}};
+$('restart').onclick=()=>{if(onlineRole==='guest')return;newGame();if(onlineRole==='host')sendOnline('state',packState());};$('pause').onclick=()=>{if(ended||onlineRole==='guest')return;paused=!paused;$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';if(onlineRole==='host')sendOnline('state',packState());};$('landscapeBtn').onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen({navigationUI:'hide'});}catch(e){}try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape');}catch(e){};};
 newGame();requestAnimationFrame(loop);
 })();
 </script></body></html>
