@@ -175,11 +175,11 @@ const supabaseClient=window.supabase?.createClient?window.supabase.createClient(
 let selectedCharacter=null,hostCharacter='MELİS',guestCharacter='KADİR',characterConfirmed=false;
 let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSend=0,onlineConnected=false,opponentJoined=false,remoteTarget=null,rematchRequested=false,guestRematchRequested=false;
 const c=document.getElementById('game');
-// Telefonlarda çizim çözünürlüğünü düşür: oyun koordinatları aynı kalır, GPU daha az piksel işler.
-const renderScale=matchMedia('(pointer:coarse)').matches?0.75:1;
-c.width=Math.round(1000*renderScale);c.height=Math.round(560*renderScale);
-const ctx=c.getContext('2d',{alpha:false,desynchronized:true});
-ctx.setTransform(renderScale,0,0,renderScale,0,0);
+// Tuvalin iç çözünürlüğünü oyun koordinatlarıyla birebir tut.
+// Mobil cihazlarda ölçekli backing-store bazı tarayıcılarda yerel çizimi bulanık/donuk gösterebildiği için kapalı.
+c.width=1000;c.height=560;
+const ctx=c.getContext('2d',{alpha:false});
+ctx.setTransform(1,0,0,1,0,0);
 const W=1000,H=560,ground=475,keys={};let p1,p2,ball,score1=0,score2=0,time=90,paused=false,ended=false,last=0,goalFlash=0;
 const $=id=>document.getElementById(id);
 function player(x,name,color,hair,dir){return{x,y:ground,vx:0,vy:0,r:32,name,color,hair,dir,onGround:true,cool:0}}
@@ -398,8 +398,8 @@ function loop(ts){
  // Yedek durum paketi; asıl tuş paketleri keydown/keyup anında gönderilir.
  if(onlineConnected&&onlineRole&&ts-lastInputSend>120){lastInputSend=ts;sendOnline('input',localInputPacket());}
  if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>33){lastStateSend=ts;sendOnline('state',packState());}
- // Telefonda 30 FPS çizim yeterli; fizik yine 60 Hz çalışır ve daha az GPU yükü oluşur.
- const drawInterval=isCoarseDevice?33:16;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}
+ // Her animasyon karesinde çiz: yerel cihaz kendi hareketini bekletmeden görsün.
+ lastDraw=ts;draw();
  requestAnimationFrame(loop)
 }
 // Sekme/ekran geri geldiğinde eski zaman farkını simülasyona yükleme.
