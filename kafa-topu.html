@@ -173,7 +173,7 @@ const SUPABASE_URL='https://rjoziolbflgewyztieqg.supabase.co';
 const SUPABASE_KEY='sb_publishable_EFCm1nw2PJ0sYb1Mxc1BWw_Ao0idjYb';
 const supabaseClient=window.supabase?.createClient?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 let selectedCharacter=null,hostCharacter='MELİS',guestCharacter='KADİR',characterConfirmed=false;
-let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSend=0,onlineConnected=false,opponentJoined=false,remoteTarget=null,rematchRequested=false,guestRematchRequested=false,ballSnapshots=[];
+let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSend=0,onlineConnected=false,opponentJoined=false,remoteTarget=null,rematchRequested=false,guestRematchRequested=false,ballSnapshots=[],playerSnapshots=[];
 // WebRTC oyun veri kanalı: Supabase yalnızca oda eşleştirme ve bağlantı sinyalleşmesi için kullanılır.
 let rtcPeer=null,rtcData=null,rtcStateData=null,rtcPendingCandidates=[],rtcReady=false,rtcStarting=false,rtcStateSeq=0,lastRtcStateSeq=-1;
 const rtcConfig={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
@@ -187,7 +187,7 @@ const W=1000,H=560,ground=475,keys={};let p1,p2,ball,score1=0,score2=0,time=90,p
 const $=id=>document.getElementById(id);
 function player(x,name,color,hair,dir){return{x,y:ground,vx:0,vy:0,r:32,name,color,hair,dir,onGround:true,cool:0}}
 function resetPositions(){const leftName=hostCharacter;const rightName=leftName==='MELİS'?'KADİR':'MELİS';const color=n=>n==='MELİS'?'#a78bfa':'#41d9df';const hair=n=>n==='MELİS'?'#39246f':'#172e55';p1=player(430,leftName,color(leftName),hair(leftName),1);p2=player(570,rightName,color(rightName),hair(rightName),-1);ball={x:W/2,y:ground-70,vx:0,vy:0,r:22};}
-function newGame(){const leftName=hostCharacter;const rightName=leftName==='MELİS'?'KADİR':'MELİS';$('scoreLeftName').textContent=leftName;$('scoreRightName').textContent=rightName;document.querySelector('.control-card:first-child h3').textContent=(leftName==='MELİS'?'💜 MELİS':'⚡ KADİR')+' – Sol oyuncu';document.querySelector('.control-card:last-child h3').textContent=(rightName==='MELİS'?'💜 MELİS':'⚡ KADİR')+' – Sağ oyuncu';score1=score2=0;time=90;paused=false;ended=false;goalFlash=0;rematchRequested=false;guestRematchRequested=false;remoteTarget=null;remoteKeys={};ballSnapshots=[];$('matchEnd').hidden=true;resetPositions();$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent='01:30';$('message').textContent='Maç başladı! Topa yaklaş ve şut tuşuna bas.';$('pause').textContent='⏸ Duraklat';}
+function newGame(){const leftName=hostCharacter;const rightName=leftName==='MELİS'?'KADİR':'MELİS';$('scoreLeftName').textContent=leftName;$('scoreRightName').textContent=rightName;document.querySelector('.control-card:first-child h3').textContent=(leftName==='MELİS'?'💜 MELİS':'⚡ KADİR')+' – Sol oyuncu';document.querySelector('.control-card:last-child h3').textContent=(rightName==='MELİS'?'💜 MELİS':'⚡ KADİR')+' – Sağ oyuncu';score1=score2=0;time=90;paused=false;ended=false;goalFlash=0;rematchRequested=false;guestRematchRequested=false;remoteTarget=null;remoteKeys={};ballSnapshots=[];playerSnapshots=[];$('matchEnd').hidden=true;resetPositions();$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent='01:30';$('message').textContent='Maç başladı! Topa yaklaş ve şut tuşuna bas.';$('pause').textContent='⏸ Duraklat';}
 function downFor(playerIndex,k){
  if(!onlineRole)return !!keys[k];
  const isRemote=(onlineRole==='host'&&playerIndex===1)||(onlineRole==='guest'&&playerIndex===0);
@@ -295,7 +295,7 @@ function leaveOnlineToLobby(){
  $('lobbyOverlay').hidden=true;newGame();
 }
 function packState(){return {sentAt:Date.now(),p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
-function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;if(onlineRole==='guest'){ballSnapshots.push({receivedAt:performance.now(),ball:{x:s.ball.x,y:s.ball.y,vx:s.ball.vx,vy:s.ball.vy,r:s.ball.r}});if(ballSnapshots.length>12)ballSnapshots.shift();}score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;const a=$('s1'),b=$('s2'),tm=$('timer'),msg=$('message'),pauseBtn=$('pause');const v1=String(score1),v2=String(score2),vt=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;if(a.textContent!==v1)a.textContent=v1;if(b.textContent!==v2)b.textContent=v2;if(tm.textContent!==vt)tm.textContent=vt;if(msg.textContent!==(s.message||''))msg.textContent=s.message||'';const pt=paused?'▶ Devam et':'⏸ Duraklat';if(pauseBtn.textContent!==pt)pauseBtn.textContent=pt;$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
+function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;if(onlineRole==='guest'){const receivedAt=performance.now();ballSnapshots.push({receivedAt,ball:{x:s.ball.x,y:s.ball.y,vx:s.ball.vx,vy:s.ball.vy,r:s.ball.r}});if(ballSnapshots.length>12)ballSnapshots.shift();playerSnapshots.push({receivedAt,p1:{x:s.p1.x,y:s.p1.y,vx:s.p1.vx,vy:s.p1.vy,onGround:s.p1.onGround,cool:s.p1.cool}});if(playerSnapshots.length>12)playerSnapshots.shift();}score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;const a=$('s1'),b=$('s2'),tm=$('timer'),msg=$('message'),pauseBtn=$('pause');const v1=String(score1),v2=String(score2),vt=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;if(a.textContent!==v1)a.textContent=v1;if(b.textContent!==v2)b.textContent=v2;if(tm.textContent!==vt)tm.textContent=vt;if(msg.textContent!==(s.message||''))msg.textContent=s.message||'';const pt=paused?'▶ Devam et':'⏸ Duraklat';if(pauseBtn.textContent!==pt)pauseBtn.textContent=pt;$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
 function sendSignal(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
 function rtcIsOpen(){return !!(rtcData&&rtcData.readyState==='open'&&rtcStateData&&rtcStateData.readyState==='open');}
 function sendOnline(event,payload){
@@ -304,13 +304,15 @@ function sendOnline(event,payload){
   try{rtcData.send(JSON.stringify({event,payload}));return;}catch(e){}
  }
  if(event==='state'&&rtcStateData&&rtcStateData.readyState==='open'){
+  // Geride kalan durum paketlerini kuyruğa yığma; sonraki kare daha güncel konumu taşıyacak.
+  if(rtcStateData.bufferedAmount>24000)return;
   try{rtcStateData.send(JSON.stringify({event,payload,seq:++rtcStateSeq}));return;}catch(e){}
  }
  // WebRTC kurulana kadar veya ilgili kanal kapalıysa Supabase yedeği.
  sendSignal(event,payload);
 }
 function closeRtc(){
- rtcReady=false;rtcStarting=false;rtcPendingCandidates=[];rtcStateSeq=0;lastRtcStateSeq=-1;ballSnapshots=[];
+ rtcReady=false;rtcStarting=false;rtcPendingCandidates=[];rtcStateSeq=0;lastRtcStateSeq=-1;ballSnapshots=[];playerSnapshots=[];
  try{if(rtcData){rtcData.onopen=rtcData.onclose=rtcData.onmessage=null;rtcData.close();}}catch(e){}
  try{if(rtcStateData){rtcStateData.onopen=rtcStateData.onclose=rtcStateData.onmessage=null;rtcStateData.close();}}catch(e){}
  try{if(rtcPeer){rtcPeer.onicecandidate=rtcPeer.ondatachannel=rtcPeer.onconnectionstatechange=null;rtcPeer.close();}}catch(e){}
@@ -448,27 +450,28 @@ function predictGuestPlayer(dt){
  p2.vy+=.52*step;p2.y+=p2.vy*step;
  if(p2.y>=ground){p2.y=ground;p2.vy=0;p2.onGround=true;}
 }
-function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;const t=remoteTarget;
- // Rakip ve top sunucu durumuna yumuşakça yaklaşır; yerel Kadir karakteri yalnızca küçük düzeltme alır.
- // Guest Kadir karakteri hareket tuşuna basılıyken sunucu konumuyla geri çekilmez.
- // Tuş bırakıldığında sunucu konumuna yumuşakça yaklaşarak iki ekran yeniden eşitlenir.
+function smoothRemoteCorrection(now){
+ if(onlineRole!=='guest'||playerSnapshots.length===0)return;
+ // Rakip karakteri paket geldikçe sıçratmak yerine 70 ms geriden zaman damgalı olarak çiz.
+ const renderAt=now-70;
+ while(playerSnapshots.length>2&&playerSnapshots[1].receivedAt<renderAt)playerSnapshots.shift();
+ const first=playerSnapshots[0],second=playerSnapshots[1];
+ const applyExtrapolated=snap=>{
+  const age=Math.max(0,Math.min(.12,(renderAt-snap.receivedAt)/1000));
+  p1.x=snap.p1.x+snap.p1.vx*age*60;
+  p1.y=snap.p1.y+snap.p1.vy*age*60;
+  p1.vx=snap.p1.vx;p1.vy=snap.p1.vy;p1.onGround=snap.p1.onGround;p1.cool=snap.p1.cool;
+ };
+ if(!second||renderAt>second.receivedAt){applyExtrapolated(second||first);return;}
+ if(renderAt<first.receivedAt){applyExtrapolated(first);return;}
+ const span=Math.max(1,second.receivedAt-first.receivedAt);
+ const alpha=Math.max(0,Math.min(1,(renderAt-first.receivedAt)/span));
+ for(const key of ['x','y','vx','vy','cool'])p1[key]=first.p1[key]+(second.p1[key]-first.p1[key])*alpha;
+ p1.onGround=alpha<.5?first.p1.onGround:second.p1.onGround;
+ // Katılan oyuncunun kendi karakteri yerel tahminle hareket eder; yalnızca tuşlar bırakılınca küçük düzeltme uygula.
+ const t=remoteTarget;
  const guestMoving=!!(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp);
- for(const [obj,target,positionFactor] of [[p1,t.p1,.18]]){
-  for(const key of Object.keys(target)){
-   if(typeof target[key]==='number'){
-    const factor=(key==='x'||key==='y')?positionFactor:.12;
-    obj[key]+=(target[key]-obj[key])*factor;
-   }else obj[key]=target[key];
-  }
- }
- if(!guestMoving){
-  p2.x+=(t.p2.x-p2.x)*.08;
-  p2.y+=(t.p2.y-p2.y)*.08;
-  p2.vx+=(t.p2.vx-p2.vx)*.12;
-  p2.vy+=(t.p2.vy-p2.vy)*.12;
-  p2.onGround=t.p2.onGround;
-  p2.cool=t.p2.cool;
- }
+ if(t&&!guestMoving){p2.x+=(t.p2.x-p2.x)*.08;p2.y+=(t.p2.y-p2.y)*.08;p2.vx+=(t.p2.vx-p2.vx)*.12;p2.vy+=(t.p2.vy-p2.vy)*.12;p2.onGround=t.p2.onGround;p2.cool=t.p2.cool;}
 }
 
 function interpolateGuestBall(now){
@@ -501,7 +504,7 @@ function loop(ts){
    if(onlineRole==='guest'&&onlineConnected)predictGuestPlayer(fixedStep);
    simulationAccumulator-=fixedStep;steps++;
  }
- if(onlineRole==='guest'&&onlineConnected){smoothRemoteCorrection();interpolateGuestBall(ts);}
+ if(onlineRole==='guest'&&onlineConnected){smoothRemoteCorrection(ts);interpolateGuestBall(ts);}
  // Yedek durum paketi; asıl tuş paketleri keydown/keyup anında gönderilir.
  if(onlineConnected&&onlineRole&&ts-lastInputSend>(rtcIsOpen()?100:180)){lastInputSend=ts;sendOnline('input',localInputPacket());}
  if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>(rtcIsOpen()?33:50)){lastStateSend=ts;sendOnline('state',packState());}
