@@ -366,19 +366,19 @@ function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;
  // Guest Kadir karakteri hareket tuşuna basılıyken sunucu konumuyla geri çekilmez.
  // Tuş bırakıldığında sunucu konumuna yumuşakça yaklaşarak iki ekran yeniden eşitlenir.
  const guestMoving=!!(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp);
- for(const [obj,target,positionFactor] of [[p1,t.p1,.30],[ball,t.ball,.28]]){
+ for(const [obj,target,positionFactor] of [[p1,t.p1,.18],[ball,t.ball,.16]]){
   for(const key of Object.keys(target)){
    if(typeof target[key]==='number'){
-    const factor=(key==='x'||key==='y')?positionFactor:.20;
+    const factor=(key==='x'||key==='y')?positionFactor:.12;
     obj[key]+=(target[key]-obj[key])*factor;
    }else obj[key]=target[key];
   }
  }
  if(!guestMoving){
-  p2.x+=(t.p2.x-p2.x)*.12;
-  p2.y+=(t.p2.y-p2.y)*.12;
-  p2.vx+=(t.p2.vx-p2.vx)*.18;
-  p2.vy+=(t.p2.vy-p2.vy)*.18;
+  p2.x+=(t.p2.x-p2.x)*.08;
+  p2.y+=(t.p2.y-p2.y)*.08;
+  p2.vx+=(t.p2.vx-p2.vx)*.12;
+  p2.vy+=(t.p2.vy-p2.vy)*.12;
   p2.onGround=t.p2.onGround;
   p2.cool=t.p2.cool;
  }
@@ -396,8 +396,8 @@ function loop(ts){
  }
  if(onlineRole==='guest'&&onlineConnected)smoothRemoteCorrection();
  // Yedek durum paketi; asıl tuş paketleri keydown/keyup anında gönderilir.
- if(onlineConnected&&onlineRole&&ts-lastInputSend>120){lastInputSend=ts;sendOnline('input',localInputPacket());}
- if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>33){lastStateSend=ts;sendOnline('state',packState());}
+ if(onlineConnected&&onlineRole&&ts-lastInputSend>180){lastInputSend=ts;sendOnline('input',localInputPacket());}
+ if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>50){lastStateSend=ts;sendOnline('state',packState());}
  // Her animasyon karesinde çiz: yerel cihaz kendi hareketini bekletmeden görsün.
  lastDraw=ts;draw();
  requestAnimationFrame(loop)
