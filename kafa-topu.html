@@ -347,7 +347,8 @@ $('createRoom').onclick=()=>{if(!characterConfirmed||!selectedCharacter){$('char
 $('showJoin').onclick=()=>{$('joinArea').hidden=false;$('roomInput').focus();};
 $('joinRoom').onclick=()=>{const code=$('roomInput').value.trim().toUpperCase();if(!/^\d{6}$/.test(code)){setOnlineStatus('Lütfen 6 haneli geçerli oda kodunu gir.');return;}selectedCharacter=null;characterConfirmed=false;setOnlineStatus('Odaya bağlanılıyor. Ev sahibinin seçtiği karakter sana atanacak…');connectRoom('guest',code);};
 $('copyRoom').onclick=()=>{const code=$('roomCode').textContent;navigator.clipboard?.writeText(code).then(()=>setOnlineStatus('Oda kodu kopyalandı. Kadir’e gönder!')).catch(()=>setOnlineStatus('Oda kodun: '+code));};
-let lastDraw=0,lastInputSend=0,lastCorrection=0;
+let lastDraw=0,lastInputSend=0,lastCorrection=0,simulationAccumulator=0;
+const isCoarseDevice=matchMedia('(pointer:coarse)').matches;
 function localInputPacket(){return {keys:onlineRole==='host'?{a:!!keys.a,d:!!keys.d,w:!!keys.w,f:!!keys.f}:{ArrowLeft:!!keys.ArrowLeft,ArrowRight:!!keys.ArrowRight,ArrowUp:!!keys.ArrowUp,l:!!keys.l}};}
 function predictGuestPlayer(dt){
  // Kadir'in kendi karakteri ekranda anında hareket eder; top ve skor hâlâ kurucunun otoriter simülasyonundadır.
@@ -383,14 +384,26 @@ function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;
  }
 }
 function sendInputNow(){if(onlineConnected&&onlineRole)sendOnline('input',localInputPacket());}
-function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=ts;
- // Fizik ve skor yalnızca oda kurucusunda; bağlanan cihaz kendi oyuncusunu yerel tahminle anında hareket ettirir.
- if(!onlineRole||onlineRole==='host')physics(dt);
- if(onlineRole==='guest'&&onlineConnected){predictGuestPlayer(dt);smoothRemoteCorrection();}
+function loop(ts){
+ // Mobil tarayıcılar FPS'i düşürdüğünde fizik de yavaşlamasın diye sabit 60 Hz adımla simüle et.
+ const elapsed=Math.min((ts-last)/1000||0,0.1);last=ts;simulationAccumulator=Math.min(simulationAccumulator+elapsed,0.1);
+ const fixedStep=1/60;let steps=0;
+ while(simulationAccumulator>=fixedStep&&steps<6){
+   // Fizik ve skor yalnızca oda kurucusunda; misafir kendi karakterini yerel tahminle hareket ettirir.
+   if(!onlineRole||onlineRole==='host')physics(fixedStep);
+   if(onlineRole==='guest'&&onlineConnected)predictGuestPlayer(fixedStep);
+   simulationAccumulator-=fixedStep;steps++;
+ }
+ if(onlineRole==='guest'&&onlineConnected)smoothRemoteCorrection();
  // Yedek durum paketi; asıl tuş paketleri keydown/keyup anında gönderilir.
  if(onlineConnected&&onlineRole&&ts-lastInputSend>120){lastInputSend=ts;sendOnline('input',localInputPacket());}
  if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>33){lastStateSend=ts;sendOnline('state',packState());}
- const drawInterval=16;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}requestAnimationFrame(loop)}
+ // Telefonda 30 FPS çizim yeterli; fizik yine 60 Hz çalışır ve daha az GPU yükü oluşur.
+ const drawInterval=isCoarseDevice?33:16;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}
+ requestAnimationFrame(loop)
+}
+// Sekme/ekran geri geldiğinde eski zaman farkını simülasyona yükleme.
+document.addEventListener('visibilitychange',()=>{last=0;simulationAccumulator=0;});
 window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();if(!keys[k]){keys[k]=true;sendInputNow();}});
 window.addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(keys[k]){keys[k]=false;sendInputNow();}});
 document.querySelectorAll('[data-key]').forEach(b=>{
