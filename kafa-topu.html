@@ -23,11 +23,18 @@
  body.online-playing .timer{font-size:clamp(12px,1.9vw,16px)}
  body.online-playing .stage{grid-row:2;min-height:0;height:100%;width:100%;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
  body.online-playing canvas{display:block;width:100%;height:100%;max-height:100%;max-width:100%;object-fit:contain}
- body.online-playing .controls{grid-row:3;position:relative;left:auto;right:auto;bottom:auto;margin:0;padding:0 2px 2px;display:flex;align-items:stretch;justify-content:center;gap:6px;width:100%;min-height:0;pointer-events:none}
+ body.online-playing .controls{grid-row:3;position:relative;left:auto;right:auto;bottom:auto;margin:0;padding:0 2px 3px;display:flex;align-items:stretch;justify-content:center;gap:6px;width:100%;min-height:0;pointer-events:none}
  body.online-playing .control-card{pointer-events:auto;flex:1;max-width:49%;min-width:0;padding:2px 5px;margin:0;border-radius:8px;background:#101c2ddd}
+ /* Çevrim içi maçta her cihaz yalnızca kendi oyuncusunun kontrol panelini görür. */
+ body.online-playing.online-host .controls .control-card:last-child,
+ body.online-playing.online-guest .controls .control-card:first-child{display:none!important}
+ body.online-playing.online-host .controls,
+ body.online-playing.online-guest .controls{display:flex!important;justify-content:center;align-items:stretch}
+ body.online-playing.online-host .controls .control-card,
+ body.online-playing.online-guest .controls .control-card{display:block!important;flex:1 1 100%;width:100%;max-width:760px;margin:0 auto;padding:3px 8px}
  body.online-playing .control-card h3{font-size:9px;line-height:1.1;margin:0 0 2px;text-align:center}
  body.online-playing .touch{display:flex!important;gap:4px;margin:0}
- body.online-playing .touch button{flex:1;min-width:0;min-height:clamp(28px,6.5vh,44px);padding:1px;font-size:clamp(13px,2.6vw,19px);border-radius:6px}
+ body.online-playing .touch button{flex:1;min-width:0;min-height:clamp(42px,8vh,62px);padding:1px;font-size:clamp(16px,3vw,22px);border-radius:7px}
  body.online-playing .keys{display:none!important}
  body.online-playing .actions{display:none!important}
  /* Çevrim içi mobil maçta yalnızca bu cihazın oyuncu tuşlarını göster */
@@ -181,7 +188,7 @@ async function connectRoom(role,code){if(!supabaseClient){setOnlineStatus('Bağl
  ch.on('broadcast',{event:'state'},({payload})=>{if(onlineRole==='guest')applyState(payload);});
  ch.on('broadcast',{event:'hello'},()=>{if(onlineRole==='host'){newGame();sendOnline('state',packState());setOnlineStatus('Kadir bağlandı! Maç başladı. 💜');}});
  ch.on('broadcast',{event:'leave'},()=>{if(onlineRole==='host')setOnlineStatus('Diğer oyuncu odadan ayrıldı. Kodla tekrar katılabilir.');});
- ch.subscribe(status=>{if(status==='SUBSCRIBED'){onlineConnected=true;if(role==='host'){$('roomCode').textContent=code;$('roomCodeBox').hidden=false;setOnlineStatus('Oda hazır! Kadir bu kodu kendi cihazında girsin. Sen MELİS olarak oynayacaksın.');newGame();}else{document.body.classList.add('online-guest');setOnlineStatus('Odaya bağlandın! Kadir olarak oynuyorsun. Melis’in maçı başlatmasını bekle.');sendOnline('hello',{name:'KADİR'});}}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setOnlineStatus('Bağlantı kurulamadı. Supabase Realtime ayarlarını kontrol edeceğiz.');$('createRoom').disabled=false;$('joinRoom').disabled=false;}});
+ ch.subscribe(status=>{if(status==='SUBSCRIBED'){onlineConnected=true;document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');if(role==='host'){$('roomCode').textContent=code;$('roomCodeBox').hidden=false;setOnlineStatus('Oda hazır! Kadir bu kodu kendi cihazında girsin. Sen MELİS olarak oynayacaksın.');newGame();}else{document.body.classList.add('online-guest');setOnlineStatus('Odaya bağlandın! Kadir olarak oynuyorsun. Melis’in maçı başlatmasını bekle.');sendOnline('hello',{name:'KADİR'});}}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setOnlineStatus('Bağlantı kurulamadı. Supabase Realtime ayarlarını kontrol edeceğiz.');$('createRoom').disabled=false;$('joinRoom').disabled=false;}});
 }
 $('createRoom').onclick=()=>{const code=Math.random().toString(36).slice(2,8).toUpperCase();connectRoom('host',code);};
 $('joinRoom').onclick=()=>{const code=$('roomInput').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(code)){setOnlineStatus('Lütfen 6 karakterli geçerli oda kodunu gir.');return;}connectRoom('guest',code);};
