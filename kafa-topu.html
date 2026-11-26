@@ -328,7 +328,7 @@ let lastDraw=0,lastInputSend=0,lastCorrection=0;
 function localInputPacket(){return {keys:onlineRole==='host'?{a:!!keys.a,d:!!keys.d,w:!!keys.w,f:!!keys.f}:{ArrowLeft:!!keys.ArrowLeft,ArrowRight:!!keys.ArrowRight,ArrowUp:!!keys.ArrowUp,l:!!keys.l}};}
 function predictGuestPlayer(dt){
  // Kadir'in kendi karakteri ekranda anında hareket eder; top ve skor hâlâ kurucunun otoriter simülasyonundadır.
- if(onlineRole!=='guest'||!onlineConnected||!remoteTarget||paused||ended)return;
+ if(onlineRole!=='guest'||!onlineConnected||paused||ended)return;
  const step=Math.min(dt,0.04)*60;let ax=0;
  if(keys.ArrowLeft)ax=-.72;if(keys.ArrowRight)ax=.72;
  p2.vx+=ax*step;p2.vx*=Math.pow(.84,step);p2.vx=Math.max(-7,Math.min(7,p2.vx));
@@ -339,13 +339,24 @@ function predictGuestPlayer(dt){
 }
 function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;const t=remoteTarget;
  // Rakip ve top sunucu durumuna yumuşakça yaklaşır; yerel Kadir karakteri yalnızca küçük düzeltme alır.
- for(const [obj,target,positionFactor] of [[p1,t.p1,.30],[p2,t.p2,.055],[ball,t.ball,.28]]){
+ // Guest Kadir karakteri hareket tuşuna basılıyken sunucu konumuyla geri çekilmez.
+ // Tuş bırakıldığında sunucu konumuna yumuşakça yaklaşarak iki ekran yeniden eşitlenir.
+ const guestMoving=!!(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp);
+ for(const [obj,target,positionFactor] of [[p1,t.p1,.30],[ball,t.ball,.28]]){
   for(const key of Object.keys(target)){
    if(typeof target[key]==='number'){
     const factor=(key==='x'||key==='y')?positionFactor:.20;
     obj[key]+=(target[key]-obj[key])*factor;
-   }else if(obj!==p2||key==='onGround')obj[key]=target[key];
+   }else obj[key]=target[key];
   }
+ }
+ if(!guestMoving){
+  p2.x+=(t.p2.x-p2.x)*.12;
+  p2.y+=(t.p2.y-p2.y)*.12;
+  p2.vx+=(t.p2.vx-p2.vx)*.18;
+  p2.vy+=(t.p2.vy-p2.vy)*.18;
+  p2.onGround=t.p2.onGround;
+  p2.cool=t.p2.cool;
  }
 }
 function sendInputNow(){if(onlineConnected&&onlineRole)sendOnline('input',localInputPacket());}
@@ -359,7 +370,23 @@ function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=ts;
  const drawInterval=16;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}requestAnimationFrame(loop)}
 window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();if(!keys[k]){keys[k]=true;sendInputNow();}});
 window.addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(keys[k]){keys[k]=false;sendInputNow();}});
-document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();if(!keys[k]){keys[k]=true;sendInputNow();}},off=e=>{e.preventDefault();if(keys[k]){keys[k]=false;sendInputNow();}};b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off));});function setMode(mode){document.body.classList.toggle('phone-mode',mode==='phone');document.body.classList.toggle('pc-mode',mode==='pc');$('phoneMode').classList.toggle('active',mode==='phone');$('pcMode').classList.toggle('active',mode==='pc');$('modeHint').textContent=mode==='phone'?'Telefon modu: çevrim içi maçta yalnızca kendi tuşların görünür.':'PC modu: klavye ile oynayın.';try{localStorage.setItem('mkw_headball_mode',mode)}catch(e){}}
+document.querySelectorAll('[data-key]').forEach(b=>{
+ const k=b.dataset.key;
+ const press=e=>{if(e&&e.cancelable)e.preventDefault();if(!keys[k]){keys[k]=true;sendInputNow();}};
+ const release=e=>{if(e&&e.cancelable)e.preventDefault();if(keys[k]){keys[k]=false;sendInputNow();}};
+ // Pointer destekli telefonlarda parmak butonun dışına kaysa bile basılı tutmayı takip et.
+ b.addEventListener('pointerdown',e=>{try{b.setPointerCapture(e.pointerId)}catch(_){}press(e)});
+ b.addEventListener('pointerup',release);
+ b.addEventListener('pointercancel',release);
+ b.addEventListener('lostpointercapture',release);
+ // Eski/uyumsuz mobil tarayıcılar için dokunmatik yedek olayları.
+ b.addEventListener('touchstart',press,{passive:false});
+ b.addEventListener('touchend',release,{passive:false});
+ b.addEventListener('touchcancel',release,{passive:false});
+ b.addEventListener('contextmenu',e=>e.preventDefault());
+});
+window.addEventListener('blur',()=>{for(const k of Object.keys(keys)){if(keys[k]){keys[k]=false;}}sendInputNow();});
+function setMode(mode){document.body.classList.toggle('phone-mode',mode==='phone');document.body.classList.toggle('pc-mode',mode==='pc');$('phoneMode').classList.toggle('active',mode==='phone');$('pcMode').classList.toggle('active',mode==='pc');$('modeHint').textContent=mode==='phone'?'Telefon modu: çevrim içi maçta yalnızca kendi tuşların görünür.':'PC modu: klavye ile oynayın.';try{localStorage.setItem('mkw_headball_mode',mode)}catch(e){}}
 $('phoneMode').onclick=()=>setMode('phone');$('pcMode').onclick=()=>setMode('pc');
 let preferredMode='pc';try{preferredMode=localStorage.getItem('mkw_headball_mode')||(matchMedia('(max-width: 700px), (pointer: coarse)').matches?'phone':'pc')}catch(e){}setMode(preferredMode);
 function requestRematch(){
