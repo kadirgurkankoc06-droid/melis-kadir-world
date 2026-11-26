@@ -175,7 +175,7 @@ const supabaseClient=window.supabase?.createClient?window.supabase.createClient(
 let selectedCharacter=null,hostCharacter='MELİS',guestCharacter='KADİR',characterConfirmed=false;
 let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSend=0,onlineConnected=false,opponentJoined=false,remoteTarget=null,rematchRequested=false,guestRematchRequested=false,ballSnapshots=[];
 // WebRTC oyun veri kanalı: Supabase yalnızca oda eşleştirme ve bağlantı sinyalleşmesi için kullanılır.
-let rtcPeer=null,rtcData=null,rtcPendingCandidates=[],rtcReady=false,rtcStarting=false;
+let rtcPeer=null,rtcData=null,rtcStateData=null,rtcPendingCandidates=[],rtcReady=false,rtcStarting=false,rtcStateSeq=0,lastRtcStateSeq=-1;
 const rtcConfig={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
 const c=document.getElementById('game');
 // Tuvalin iç çözünürlüğünü oyun koordinatlarıyla birebir tut.
@@ -297,30 +297,40 @@ function leaveOnlineToLobby(){
 function packState(){return {sentAt:Date.now(),p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
 function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;if(onlineRole==='guest'){ballSnapshots.push({receivedAt:performance.now(),ball:{x:s.ball.x,y:s.ball.y,vx:s.ball.vx,vy:s.ball.vy,r:s.ball.r}});if(ballSnapshots.length>12)ballSnapshots.shift();}score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;const a=$('s1'),b=$('s2'),tm=$('timer'),msg=$('message'),pauseBtn=$('pause');const v1=String(score1),v2=String(score2),vt=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;if(a.textContent!==v1)a.textContent=v1;if(b.textContent!==v2)b.textContent=v2;if(tm.textContent!==vt)tm.textContent=vt;if(msg.textContent!==(s.message||''))msg.textContent=s.message||'';const pt=paused?'▶ Devam et':'⏸ Duraklat';if(pauseBtn.textContent!==pt)pauseBtn.textContent=pt;$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
 function sendSignal(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
-function rtcIsOpen(){return !!(rtcData&&rtcData.readyState==='open');}
+function rtcIsOpen(){return !!(rtcData&&rtcData.readyState==='open'&&rtcStateData&&rtcStateData.readyState==='open');}
 function sendOnline(event,payload){
- // Hareket ve fizik paketleri doğrudan WebRTC DataChannel üzerinden gider.
- if((event==='input'||event==='state')&&rtcIsOpen()){
+ // Tuşlar güvenilir/sıralı kanaldan; sık değişen oyun durumu kayıpsızlık beklemeden ayrı kanaldan gider.
+ if(event==='input'&&rtcData&&rtcData.readyState==='open'){
   try{rtcData.send(JSON.stringify({event,payload}));return;}catch(e){}
  }
- // WebRTC kurulana kadar veya bağlantı desteklenmezse eski Supabase yolu yedek olarak kalır.
+ if(event==='state'&&rtcStateData&&rtcStateData.readyState==='open'){
+  try{rtcStateData.send(JSON.stringify({event,payload,seq:++rtcStateSeq}));return;}catch(e){}
+ }
+ // WebRTC kurulana kadar veya ilgili kanal kapalıysa Supabase yedeği.
  sendSignal(event,payload);
 }
 function closeRtc(){
- rtcReady=false;rtcStarting=false;rtcPendingCandidates=[];
+ rtcReady=false;rtcStarting=false;rtcPendingCandidates=[];rtcStateSeq=0;lastRtcStateSeq=-1;ballSnapshots=[];
  try{if(rtcData){rtcData.onopen=rtcData.onclose=rtcData.onmessage=null;rtcData.close();}}catch(e){}
+ try{if(rtcStateData){rtcStateData.onopen=rtcStateData.onclose=rtcStateData.onmessage=null;rtcStateData.close();}}catch(e){}
  try{if(rtcPeer){rtcPeer.onicecandidate=rtcPeer.ondatachannel=rtcPeer.onconnectionstatechange=null;rtcPeer.close();}}catch(e){}
- rtcData=null;rtcPeer=null;
+ rtcData=null;rtcStateData=null;rtcPeer=null;
 }
 function attachRtcDataChannel(channel){
- rtcData=channel;channel.binaryType='arraybuffer';
- channel.onopen=()=>{rtcReady=true;setOnlineStatus('Doğrudan oyun bağlantısı kuruldu. Maç akıcı şekilde aktarılıyor.');};
- channel.onclose=()=>{rtcReady=false;setOnlineStatus('Doğrudan bağlantı kapandı; yedek bağlantı kullanılıyor.');};
- channel.onerror=()=>{rtcReady=false;};
+ const isState=channel.label==='mkw-state';
+ if(isState)rtcStateData=channel;else rtcData=channel;
+ channel.binaryType='arraybuffer';
+ channel.onopen=()=>{if(isState){rtcReady=true;setOnlineStatus('Doğrudan düşük gecikmeli oyun bağlantısı kuruldu.');}};
+ channel.onclose=()=>{if(isState){rtcReady=false;setOnlineStatus('Doğrudan bağlantı kapandı; yedek bağlantı kullanılıyor.');}};
+ channel.onerror=()=>{if(isState)rtcReady=false;};
  channel.onmessage=ev=>{
   let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
   if(msg.event==='input'&&onlineRole==='host'&&msg.payload?.keys)remoteKeys=msg.payload.keys;
-  if(msg.event==='state'&&onlineRole==='guest')applyState(msg.payload);
+  if(msg.event==='state'&&onlineRole==='guest'){
+   // Sırasız kanalda gecikmiş eski paketleri at; yalnızca en yeni oyun durumunu uygula.
+   if(Number.isFinite(msg.seq)){if(msg.seq<=lastRtcStateSeq)return;lastRtcStateSeq=msg.seq;}
+   applyState(msg.payload);
+  }
  };
 }
 function createRtcPeer(){
@@ -346,7 +356,9 @@ async function startHostRtc(){
  rtcStarting=true;
  try{
   const pc=createRtcPeer();
-  attachRtcDataChannel(pc.createDataChannel('mkw-game',{ordered:true}));
+  attachRtcDataChannel(pc.createDataChannel('mkw-input',{ordered:true}));
+  // Pozisyon paketleri eskidiklerinde tekrar gönderilmesin; güncel paket daha değerlidir.
+  attachRtcDataChannel(pc.createDataChannel('mkw-state',{ordered:false,maxRetransmits:0}));
   const offer=await pc.createOffer();await pc.setLocalDescription(offer);
   sendSignal('rtc-signal',{kind:'offer',description:pc.localDescription,from:'host'});
  }catch(e){rtcStarting=false;setOnlineStatus('Doğrudan bağlantı başlatılamadı; yedek bağlantı kullanılacak.');}
@@ -461,17 +473,18 @@ function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;
 
 function interpolateGuestBall(now){
  if(onlineRole!=='guest'||ballSnapshots.length===0)return;
- // Topu son pakete aniden sıçratmak yerine yaklaşık 100 ms geriden iki sunucu paketi arasında oynat.
- const renderAt=now-100;
+ // Yaklaşık 90 ms tampon: paketler arasındaki konumu çiz, yeni paket kısa süre gecikirse hızıyla tahmin et.
+ const renderAt=now-90;
  while(ballSnapshots.length>2&&ballSnapshots[1].receivedAt<renderAt)ballSnapshots.shift();
  const first=ballSnapshots[0],second=ballSnapshots[1];
- if(!second){
-  const age=Math.max(0,Math.min(0.05,(now-first.receivedAt)/1000));
-  ball.x=first.ball.x+first.ball.vx*age*60;
-  ball.y=first.ball.y+first.ball.vy*age*60;
-  ball.vx=first.ball.vx;ball.vy=first.ball.vy;ball.r=first.ball.r;
-  return;
- }
+ const extrapolate=snap=>{
+  const age=Math.max(0,Math.min(0.12,(renderAt-snap.receivedAt)/1000));
+  ball.x=snap.ball.x+snap.ball.vx*age*60;
+  ball.y=snap.ball.y+snap.ball.vy*age*60;
+  ball.vx=snap.ball.vx;ball.vy=snap.ball.vy;ball.r=snap.ball.r;
+ };
+ if(!second||renderAt>second.receivedAt){extrapolate(second||first);return;}
+ if(renderAt<first.receivedAt){extrapolate(first);return;}
  const span=Math.max(1,second.receivedAt-first.receivedAt);
  const alpha=Math.max(0,Math.min(1,(renderAt-first.receivedAt)/span));
  for(const key of ['x','y','vx','vy','r'])ball[key]=first.ball[key]+(second.ball[key]-first.ball[key])*alpha;
