@@ -347,12 +347,12 @@ function sendOnline(event,payload){
  // Tuş paketleri de tam tuş durumunu taşır; eski paketlerin sırayla beklemesi yerine en günceli kullanılır.
  if(event==='input'&&rtcData&&rtcData.readyState==='open'){
   // Kuyruk büyürse eski tuş durumunu biriktirme. 100 ms yedek gönderim güncel durumu tekrar iletir.
-  if(rtcData.bufferedAmount>4096)return;
+  if(rtcData.bufferedAmount>2048)return;
   try{rtcData.send(JSON.stringify({event,payload,seq:++rtcInputSeq}));return;}catch(e){}
  }
  if(event==='state'&&rtcStateData&&rtcStateData.readyState==='open'){
   // Eski pozisyonları kuyruğa yığma; sıradaki paket daha güncel konumu taşır.
-  if(rtcStateData.bufferedAmount>8192)return;
+  if(rtcStateData.bufferedAmount>4096)return;
   try{rtcStateData.send(JSON.stringify({event,payload,seq:++rtcStateSeq}));return;}catch(e){}
  }
  // WebRTC kurulana kadar veya ilgili kanal kapalıysa Supabase yedeği.
@@ -507,7 +507,7 @@ function predictGuestPlayer(dt){
 function smoothRemoteCorrection(now){
  if(onlineRole!=='guest'||playerSnapshots.length===0)return;
  // Rakip karakteri paket geldikçe sıçratmak yerine 70 ms geriden zaman damgalı olarak çiz.
- const renderAt=now-70;
+ const renderAt=now-50;
  while(playerSnapshots.length>2&&playerSnapshots[1].receivedAt<renderAt)playerSnapshots.shift();
  const first=playerSnapshots[0],second=playerSnapshots[1];
  const applyExtrapolated=snap=>{
@@ -531,11 +531,11 @@ function smoothRemoteCorrection(now){
 function interpolateGuestBall(now){
  if(onlineRole!=='guest'||ballSnapshots.length===0)return;
  // Yaklaşık 90 ms tampon: paketler arasındaki konumu çiz, yeni paket kısa süre gecikirse hızıyla tahmin et.
- const renderAt=now-90;
+ const renderAt=now-65;
  while(ballSnapshots.length>2&&ballSnapshots[1].receivedAt<renderAt)ballSnapshots.shift();
  const first=ballSnapshots[0],second=ballSnapshots[1];
  const extrapolate=snap=>{
-  const age=Math.max(0,Math.min(0.12,(renderAt-snap.receivedAt)/1000));
+  const age=Math.max(0,Math.min(0.16,(renderAt-snap.receivedAt)/1000));
   ball.x=snap.ball.x+snap.ball.vx*age*60;
   ball.y=snap.ball.y+snap.ball.vy*age*60;
   ball.vx=snap.ball.vx;ball.vy=snap.ball.vy;ball.r=snap.ball.r;
@@ -559,9 +559,11 @@ function loop(ts){
    simulationAccumulator-=fixedStep;steps++;
  }
  if(onlineRole==='guest'&&onlineConnected){smoothRemoteCorrection(ts);interpolateGuestBall(ts);}
- // Yedek durum paketi; asıl tuş paketleri keydown/keyup anında gönderilir.
- if(onlineConnected&&onlineRole&&ts-lastInputSend>(rtcIsOpen()?100:180)){lastInputSend=ts;sendOnline('input',localInputPacket());}
- if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>(rtcIsOpen()?33:50)){lastStateSend=ts;sendOnline('state',packState());}
+ // Tuş durumu yedek olarak WebRTC'de 30 Hz, Realtime yedeğinde 20 Hz gönderilir.
+ // Keydown/keyup paketleri ayrıca anında gönderildiği için bu döngü kayıp paketleri telafi eder.
+ if(onlineConnected&&onlineRole&&ts-lastInputSend>(rtcIsOpen()?33:50)){lastInputSend=ts;sendOnline('input',localInputPacket());}
+ // Oyun durumu ve top konumu WebRTC üzerinden yaklaşık 33 Hz aktarılır.
+ if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>(rtcIsOpen()?30:50)){lastStateSend=ts;sendOnline('state',packState());}
  // Her animasyon karesinde çiz: yerel cihaz kendi hareketini bekletmeden görsün.
  lastDraw=ts;draw();
  requestAnimationFrame(loop)
