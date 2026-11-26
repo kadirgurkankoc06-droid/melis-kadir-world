@@ -30,6 +30,32 @@
  body.online-playing .touch button{flex:1;min-width:0;min-height:clamp(28px,6.5vh,44px);padding:1px;font-size:clamp(13px,2.6vw,19px);border-radius:6px}
  body.online-playing .keys{display:none!important}
  body.online-playing .actions{display:none!important}
+ /* Çevrim içi mobil maçta yalnızca bu cihazın oyuncu tuşlarını göster */
+ body.online-playing.online-host .control-card:last-child{display:none!important}
+ body.online-playing.online-guest .control-card:first-child{display:none!important}
+ body.online-playing.online-host .wrap{grid-template-rows:auto minmax(0,1fr)}
+ body.online-playing.online-guest .wrap{grid-template-rows:auto minmax(0,1fr)}
+ body.online-playing.online-host .controls,
+ body.online-playing.online-guest .controls{
+   position:fixed!important;z-index:20;bottom:12px!important;top:auto!important;
+   display:block!important;width:min(44vw,420px)!important;max-width:44vw!important;
+   margin:0!important;padding:0!important;pointer-events:none!important;
+   background:transparent!important;border:0!important
+ }
+ body.online-playing.online-host .controls{left:14px!important;right:auto!important}
+ body.online-playing.online-guest .controls{right:14px!important;left:auto!important}
+ body.online-playing.online-host .control-card,
+ body.online-playing.online-guest .control-card{
+   display:block!important;width:100%!important;max-width:none!important;
+   padding:6px!important;border-radius:12px!important;background:#101c2ddd!important;
+   box-shadow:0 3px 14px #0005
+ }
+ body.online-playing .control-card h3{font-size:clamp(10px,1.7vw,14px)!important;margin:0 0 4px!important}
+ body.online-playing .touch{display:flex!important;gap:6px!important;margin:0!important}
+ body.online-playing .touch button{
+   min-height:clamp(44px,8vh,62px)!important;font-size:clamp(17px,2.6vw,23px)!important;
+   padding:3px!important;border-radius:9px!important
+ }
 }
 
 
