@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="M K kalp ve uçak logosu">
+ <defs>
+  <linearGradient id="heart" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset=".35" stop-color="#d9c9ff"/><stop offset=".68" stop-color="#8b35ff"/><stop offset="1" stop-color="#4b0d9c"/></linearGradient>
+  <linearGradient id="letters" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset=".52" stop-color="#f5efff"/><stop offset=".78" stop-color="#c5a5ff"/><stop offset="1" stop-color="#fff"/></linearGradient>
+  <linearGradient id="swoosh" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#fff"/><stop offset=".5" stop-color="#a45bff"/><stop offset="1" stop-color="#fff"/></linearGradient>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="5"/><feOffset dy="5"/><feComponentTransfer><feFuncA type="linear" slope=".7"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ </defs>
+ <!-- dark heart medallion -->
+ <path d="M256 462 C220 425 57 302 48 185 C39 82 151 36 233 112 C244 122 252 133 256 142 C260 133 268 122 279 112 C361 36 473 82 464 185 C455 302 292 425 256 462Z" fill="#100923" stroke="url(#heart)" stroke-width="17" filter="url(#glow)"/>
+ <path d="M256 441 C213 400 78 292 70 190 C63 105 151 66 222 128 C239 143 250 160 256 173 C262 160 273 143 290 128 C361 66 449 105 442 190 C434 292 299 400 256 441Z" fill="none" stroke="#7f36e8" stroke-width="4" opacity=".8"/>
+ <!-- intertwined monogram -->
+ <text x="112" y="317" font-family="Georgia,serif" font-size="238" font-weight="bold" font-style="italic" fill="url(#letters)" stroke="#32105e" stroke-width="8" paint-order="stroke" filter="url(#shadow)">M</text>
+ <text x="257" y="317" font-family="Georgia,serif" font-size="238" font-weight="bold" font-style="italic" fill="url(#letters)" stroke="#32105e" stroke-width="8" paint-order="stroke" filter="url(#shadow)">K</text>
+ <!-- diagonal travel ribbon -->
+ <path d="M118 382 C197 311 299 260 405 163" fill="none" stroke="#210b3c" stroke-width="27" stroke-linecap="round"/>
+ <path d="M118 382 C197 311 299 260 405 163" fill="none" stroke="url(#swoosh)" stroke-width="14" stroke-linecap="round" filter="url(#glow)"/>
+ <!-- airplane -->
+ <path d="M382 90 L477 43 Q488 38 484 51 L455 103 L465 142 Q467 151 458 147 L426 127 L398 155 Q390 163 388 151 L391 118 L365 104 Q356 99 367 95Z" fill="url(#letters)" stroke="#4b1685" stroke-width="7" stroke-linejoin="round" filter="url(#shadow)"/>
+ <path d="M352 125 Q326 154 302 158" fill="none" stroke="#e8d8ff" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 12"/>
+</svg>
