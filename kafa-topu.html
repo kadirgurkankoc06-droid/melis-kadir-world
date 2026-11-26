@@ -163,7 +163,13 @@ const SUPABASE_URL='https://rjoziolbflgewyztieqg.supabase.co';
 const SUPABASE_KEY='sb_publishable_EFCm1nw2PJ0sYb1Mxc1BWw_Ao0idjYb';
 const supabaseClient=window.supabase?.createClient?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSend=0,onlineConnected=false,opponentJoined=false,remoteTarget=null,rematchRequested=false,guestRematchRequested=false;
-const c=document.getElementById('game'),ctx=c.getContext('2d'),W=c.width,H=c.height,ground=475,keys={};let p1,p2,ball,score1=0,score2=0,time=90,paused=false,ended=false,last=0,goalFlash=0;
+const c=document.getElementById('game');
+// Telefonlarda çizim çözünürlüğünü düşür: oyun koordinatları aynı kalır, GPU daha az piksel işler.
+const renderScale=matchMedia('(pointer:coarse)').matches?0.75:1;
+c.width=Math.round(1000*renderScale);c.height=Math.round(560*renderScale);
+const ctx=c.getContext('2d',{alpha:false,desynchronized:true});
+ctx.setTransform(renderScale,0,0,renderScale,0,0);
+const W=1000,H=560,ground=475,keys={};let p1,p2,ball,score1=0,score2=0,time=90,paused=false,ended=false,last=0,goalFlash=0;
 const $=id=>document.getElementById(id);
 function player(x,name,color,hair,dir){return{x,y:ground,vx:0,vy:0,r:32,name,color,hair,dir,onGround:true,cool:0}}
 function resetPositions(){p1=player(430,'MELİS','#a78bfa','#39246f',1);p2=player(570,'KADİR','#41d9df','#172e55',-1);ball={x:W/2,y:ground-70,vx:0,vy:0,r:22};}
@@ -227,18 +233,19 @@ function rounded(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRec
 // Fotoğraflar yerel oyun varlıkları olarak yüklenir; yüzler dairesel kafa alanında gösterilir.
 const melisAvatar=new Image();melisAvatar.src='melis-avatar.png';
 const kadirAvatar=new Image();kadirAvatar.src='kadir-avatar.png';
-function draw(){ctx.clearRect(0,0,W,H);
-// sky and distant hills
-let g=ctx.createLinearGradient(0,0,0,ground);g.addColorStop(0,'#8bd7f2');g.addColorStop(1,'#e6f8ff');ctx.fillStyle=g;ctx.fillRect(0,0,W,ground);
-ctx.fillStyle='#a8d7a0';ctx.beginPath();ctx.moveTo(0,360);for(let x=0;x<=W;x+=70)ctx.quadraticCurveTo(x+35,320+(x%140)*.12,x+70,360);ctx.lineTo(W,ground);ctx.lineTo(0,ground);ctx.fill();
-// clouds
-ctx.fillStyle='#ffffffaa';for(const [x,y] of [[130,85],[470,115],[820,70]]){ctx.beginPath();ctx.arc(x,y,24,0,7);ctx.arc(x+27,y-9,30,0,7);ctx.arc(x+57,y,22,0,7);ctx.fill();}
-// stands
-ctx.fillStyle='#d7e7f0';ctx.fillRect(0,385,W,90);for(let x=0;x<W;x+=42){ctx.fillStyle=x%84?'#f7f9fb':'#b9d1df';ctx.fillRect(x,390,30,65)}
-// goal frames
-ctx.strokeStyle='#fff';ctx.lineWidth=10;ctx.strokeRect(8,ground-145,90,145);ctx.strokeRect(W-98,ground-145,90,145);ctx.lineWidth=3;ctx.strokeStyle='#9ab5c8';for(let y=ground-130;y<ground;y+=20){ctx.beginPath();ctx.moveTo(12,y);ctx.lineTo(94,y);ctx.stroke();ctx.beginPath();ctx.moveTo(W-94,y);ctx.lineTo(W-12,y);ctx.stroke();}
-// field
-ctx.fillStyle='#66bf70';ctx.fillRect(0,ground,W,H-ground);for(let x=0;x<W;x+=125){ctx.fillStyle=x%250?'#70c979':'#62b96b';ctx.fillRect(x,ground,125,H-ground)}ctx.strokeStyle='#f2fff0';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,ground);ctx.lineTo(W,ground);ctx.moveTo(W/2,ground);ctx.lineTo(W/2,H);ctx.stroke();ctx.beginPath();ctx.arc(W/2,ground+42,54,Math.PI,0);ctx.stroke();
+// Statik saha ve oyuncu portreleri bir kez hazırlanır; her karede tekrar çizilmez/ölçeklenmez.
+const sceneCanvas=document.createElement('canvas');sceneCanvas.width=W;sceneCanvas.height=H;const sceneCtx=sceneCanvas.getContext('2d');
+function buildStaticScene(){const q=sceneCtx;q.clearRect(0,0,W,H);
+let g=q.createLinearGradient(0,0,0,ground);g.addColorStop(0,'#8bd7f2');g.addColorStop(1,'#e6f8ff');q.fillStyle=g;q.fillRect(0,0,W,ground);
+q.fillStyle='#a8d7a0';q.beginPath();q.moveTo(0,360);for(let x=0;x<=W;x+=70)q.quadraticCurveTo(x+35,320+(x%140)*.12,x+70,360);q.lineTo(W,ground);q.lineTo(0,ground);q.fill();
+q.fillStyle='#ffffffaa';for(const [x,y] of [[130,85],[470,115],[820,70]]){q.beginPath();q.arc(x,y,24,0,7);q.arc(x+27,y-9,30,0,7);q.arc(x+57,y,22,0,7);q.fill();}
+q.fillStyle='#d7e7f0';q.fillRect(0,385,W,90);for(let x=0;x<W;x+=42){q.fillStyle=x%84?'#f7f9fb':'#b9d1df';q.fillRect(x,390,30,65)}
+q.strokeStyle='#fff';q.lineWidth=10;q.strokeRect(8,ground-145,90,145);q.strokeRect(W-98,ground-145,90,145);q.lineWidth=3;q.strokeStyle='#9ab5c8';for(let y=ground-130;y<ground;y+=20){q.beginPath();q.moveTo(12,y);q.lineTo(94,y);q.stroke();q.beginPath();q.moveTo(W-94,y);q.lineTo(W-12,y);q.stroke();}
+q.fillStyle='#66bf70';q.fillRect(0,ground,W,H-ground);for(let x=0;x<W;x+=125){q.fillStyle=x%250?'#70c979':'#62b96b';q.fillRect(x,ground,125,H-ground)}q.strokeStyle='#f2fff0';q.lineWidth=3;q.beginPath();q.moveTo(0,ground);q.lineTo(W,ground);q.moveTo(W/2,ground);q.lineTo(W/2,H);q.stroke();q.beginPath();q.arc(W/2,ground+42,54,Math.PI,0);q.stroke();}
+buildStaticScene();
+function cacheAvatar(img){if(!img.complete||!img.naturalWidth)return null;const a=document.createElement('canvas');a.width=82;a.height=82;a.getContext('2d').drawImage(img,0,0,82,82);return a;}
+let melisAvatarSmall=null,kadirAvatarSmall=null;melisAvatar.onload=()=>{melisAvatarSmall=cacheAvatar(melisAvatar)};kadirAvatar.onload=()=>{kadirAvatarSmall=cacheAvatar(kadirAvatar)};
+function draw(){ctx.clearRect(0,0,W,H);ctx.drawImage(sceneCanvas,0,0);
 // players
 function drawP(p){ctx.save();ctx.translate(p.x,p.y); // shadow
 ctx.fillStyle='#25452d55';ctx.beginPath();ctx.ellipse(0,2,39,9,0,0,7);ctx.fill();
@@ -250,8 +257,8 @@ ctx.fillStyle=shirt;ctx.beginPath();ctx.moveTo(-22,-57);ctx.quadraticCurveTo(-28
 ctx.strokeStyle='#ffffff35';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-17,-48);ctx.lineTo(-15,-17);ctx.moveTo(17,-48);ctx.lineTo(15,-17);ctx.stroke();
 ctx.fillStyle='#ffffff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText(p.name==='MELİS'?'M':'K',0,-27);
 // Onaylanan şeffaf kafa kesimleri: daire/çerçeve yok, kare esnetme yok.
-const avatar=p.name==='MELİS'?melisAvatar:kadirAvatar;
-if(avatar.complete&&avatar.naturalWidth){ctx.drawImage(avatar,-41,-139,82,82);}
+const avatar=p.name==='MELİS'?melisAvatarSmall:kadirAvatarSmall;
+if(avatar){ctx.drawImage(avatar,-41,-139);}
 else{ctx.fillStyle=p.hair;ctx.beginPath();ctx.ellipse(0,-98,34,40,0,0,Math.PI*2);ctx.fill();}
 // İsim etiketi saçın üstünde, portreye binmeyecek şekilde.
 rounded(-36,-160,72,18,8,'#101b2ddd');ctx.fillStyle='#fff';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText(p.name,0,-147);ctx.restore();}
@@ -274,7 +281,7 @@ function leaveOnlineToLobby(){
  $('onlinePanel').hidden=false;newGame();
 }
 function packState(){return {sentAt:Date.now(),p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
-function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;$('message').textContent=s.message||'';$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
+function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;const a=$('s1'),b=$('s2'),tm=$('timer'),msg=$('message'),pauseBtn=$('pause');const v1=String(score1),v2=String(score2),vt=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;if(a.textContent!==v1)a.textContent=v1;if(b.textContent!==v2)b.textContent=v2;if(tm.textContent!==vt)tm.textContent=vt;if(msg.textContent!==(s.message||''))msg.textContent=s.message||'';const pt=paused?'▶ Devam et':'⏸ Duraklat';if(pauseBtn.textContent!==pt)pauseBtn.textContent=pt;$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
 function sendOnline(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
 function setOnlineStatus(t){$('onlineStatus').textContent=t;}
 function disconnectOnline(){if(onlineChannel&&supabaseClient)supabaseClient.removeChannel(onlineChannel);onlineChannel=null;onlineRole=null;onlineRoom=null;remoteKeys={};onlineConnected=false;opponentJoined=false;document.body.classList.remove('online-guest','online-host','online-playing');document.querySelectorAll('.controls .control-card').forEach(card=>{card.hidden=false;card.style.removeProperty('display')});$('roomCodeBox').hidden=true;$('confirmCreateRoom').hidden=false;$('createRoom').disabled=false;$('joinRoom').disabled=false;setOnlineStatus('Çevrim içi oynamak için bir kişi oda oluşturur, diğeri oda kodunu girer.');}
