@@ -243,10 +243,28 @@ ball.vy+=gravity*.9*step;ball.x+=ball.vx*step;ball.y+=ball.vy*step;ball.vx*=Math
 collideBallWithPlayer(p1);collideBallWithPlayer(p2);
 if(ball.y+ball.r>ground){ball.y=ground-ball.r;if(Math.abs(ball.vy)>1.7)ball.vy*=-.62;else ball.vy=0;ball.vx*=.982;if(Math.abs(ball.vx)<.035)ball.vx=0;}
 if(ball.y-ball.r<15){ball.y=15+ball.r;ball.vy=Math.abs(ball.vy)*.8;}
-// side walls except goal mouth
-if(ball.x-ball.r<10&&!(ball.y>ground-145)){ball.x=10+ball.r;ball.vx=Math.abs(ball.vx)*.8;}if(ball.x+ball.r>W-10&&!(ball.y>ground-145)){ball.x=W-10-ball.r;ball.vx=-Math.abs(ball.vx)*.8;}
-// goals, 0-145 high
-if(ball.x<40&&ball.y>ground-145){score2++;goal('Kadir gol attı! ⚡');}else if(ball.x>W-40&&ball.y>ground-145){score1++;goal('Melis gol attı! 💜');}
+// Kale direkleri: top direğe veya üst direğe çarparsa sekerek sahaya döner.
+function collideBallSegment(x1,y1,x2,y2){
+ const sx=x2-x1,sy=y2-y1,len2=sx*sx+sy*sy;
+ const t=Math.max(0,Math.min(1,((ball.x-x1)*sx+(ball.y-y1)*sy)/len2));
+ const qx=x1+t*sx,qy=y1+t*sy,dx=ball.x-qx,dy=ball.y-qy;
+ const dist=Math.hypot(dx,dy),min=ball.r+5;
+ if(dist>=min)return;
+ let nx,ny;if(dist<.001){const sl=Math.hypot(sx,sy)||1;nx=-sy/sl;ny=sx/sl;}else{nx=dx/dist;ny=dy/dist;}
+ ball.x=qx+nx*min;ball.y=qy+ny*min;
+ const vn=ball.vx*nx+ball.vy*ny;
+ if(vn<0){ball.vx-=(1+.72)*vn*nx;ball.vy-=(1+.72)*vn*ny;}
+}
+// Kale ağzının üst direği topa çarpışma uygular; gol çizgisi açık kalır.
+collideBallSegment(8,ground-145,98,ground-145);
+collideBallSegment(W-98,ground-145,W-8,ground-145);
+// Yan saha duvarları; kale ağzına giren top kale çerçevesiyle etkileşir.
+if(ball.x-ball.r<10&&ball.y<=ground-145+ball.r){ball.x=10+ball.r;ball.vx=Math.abs(ball.vx)*.8;}
+if(ball.x+ball.r>W-10&&ball.y<=ground-145+ball.r){ball.x=W-10-ball.r;ball.vx=-Math.abs(ball.vx)*.8;}
+// Gol: top, ön kale çizgisini tamamen geçmeli ve üst direğin altından girmeli.
+const goalTop=ground-145+ball.r+5,goalBottom=ground-ball.r-2;
+if(ball.x+ball.r<98&&ball.y>goalTop&&ball.y<goalBottom){score2++;goal('Kadir gol attı! ⚡');}
+else if(ball.x-ball.r>W-98&&ball.y>goalTop&&ball.y<goalBottom){score1++;goal('Melis gol attı! 💜');}
 $('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;
 }
 function goal(msg){$('s1').textContent=score1;$('s2').textContent=score2;$('message').textContent=msg;goalFlash=1;resetPositions();if(score1>=5||score2>=5){ended=true;showMatchEnd();$('message').textContent=score1>score2?'Melis maçı kazandı! 💜🏆':'Kadir maçı kazandı! ⚡🏆';}}
