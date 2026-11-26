@@ -437,7 +437,7 @@ $('singleStart').onclick=()=>{$('lobbyOverlay').hidden=true;selectLobbyTab('sing
 $('multiStart').onclick=()=>{selectedCharacter=null;characterConfirmed=false;$('characterContinue').disabled=true;$('characterLock').textContent='Odayı kuracak kişi karakterini seçecek. Katılan oyuncuya kalan karakter atanacak.';document.querySelectorAll('.character-card').forEach(card=>card.classList.remove('selected'));$('joinArea').hidden=true;$('roomCodeBox').hidden=true;showWizardStep(2);};
 $('backToMode').onclick=()=>showWizardStep(2);
 $('characterContinue').onclick=()=>{if(!selectedCharacter)return;hostCharacter=selectedCharacter;guestCharacter=hostCharacter==='MELİS'?'KADİR':'MELİS';characterConfirmed=true;$('onlineStatus').textContent=hostCharacter+' karakterini seçtin. Oda kuruluyor…';showWizardStep(2);createRoomNow();};
-$('backToCharacter').onclick=()=>showWizardStep(1);
+$('backToCharacter').onclick=()=>{ $('joinArea').hidden=true; showWizardStep(3); };
 function createRoomNow(){if(!characterConfirmed||!selectedCharacter){setOnlineStatus('Önce kendi karakterini seç.');showWizardStep(3);return;}const code=String(Math.floor(100000+Math.random()*900000));$('roomCode').textContent=code;$('roomCodeBox').hidden=false;setOnlineStatus(hostCharacter+' karakteri sana ayrıldı. Oda oluşturuluyor…');connectRoom('host',code);}
 $('createRoom').onclick=()=>{if(!characterConfirmed||!selectedCharacter){$('characterContinue').disabled=true;$('characterLock').textContent='Oda kurmak için önce karakterini seç.';showWizardStep(3);return;}createRoomNow();};
 $('showJoin').onclick=()=>{$('joinArea').hidden=false;$('roomInput').focus();};
