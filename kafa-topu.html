@@ -273,7 +273,7 @@ function leaveOnlineToLobby(){
  const controls=document.querySelector('.controls');if(controls)controls.style.removeProperty('grid-template-columns');
  $('onlinePanel').hidden=false;newGame();
 }
-function packState(){return {p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
+function packState(){return {sentAt:Date.now(),p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
 function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;$('message').textContent=s.message||'';$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
 function sendOnline(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
 function setOnlineStatus(t){$('onlineStatus').textContent=t;}
@@ -319,12 +319,12 @@ $('joinRoom').onclick=()=>{const code=$('roomInput').value.trim().toUpperCase();
 $('copyRoom').onclick=()=>{const code=$('roomCode').textContent;navigator.clipboard?.writeText(code).then(()=>setOnlineStatus('Oda kodu kopyalandı. Kadir’e gönder!')).catch(()=>setOnlineStatus('Oda kodun: '+code));};
 let lastDraw=0,lastInputSend=0,lastCorrection=0;
 function localInputPacket(){return {keys:onlineRole==='host'?{a:!!keys.a,d:!!keys.d,w:!!keys.w,f:!!keys.f}:{ArrowLeft:!!keys.ArrowLeft,ArrowRight:!!keys.ArrowRight,ArrowUp:!!keys.ArrowUp,l:!!keys.l}};}
-function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;const t=remoteTarget,k=.24;for(const [obj,target] of [[p1,t.p1],[p2,t.p2],[ball,t.ball]])for(const key of Object.keys(target))if(typeof target[key]==='number')obj[key]+=(target[key]-obj[key])*k;else obj[key]=target[key];}
+function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;const t=remoteTarget;for(const [obj,target] of [[p1,t.p1],[p2,t.p2],[ball,t.ball]]){const dx=(target.x??obj.x)-obj.x,dy=(target.y??obj.y)-obj.y;const dist=Math.hypot(dx,dy);const k=dist>90?.34:dist>35?.24:.16;for(const key of Object.keys(target)){if(typeof target[key]==='number'){const factor=(key==='x'||key==='y')?k:.22;obj[key]+=(target[key]-obj[key])*factor;}else obj[key]=target[key];}}}
 function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=ts;physics(dt);
- if(onlineConnected&&onlineRole&&ts-lastInputSend>45){lastInputSend=ts;sendOnline('input',localInputPacket());}
- if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>120){lastStateSend=ts;sendOnline('state',packState());}
- if(onlineRole==='guest'&&onlineConnected&&ts-lastCorrection>120){lastCorrection=ts;smoothRemoteCorrection();}
- const drawInterval=matchMedia('(pointer:coarse)').matches?16:22;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}requestAnimationFrame(loop)}
+ if(onlineConnected&&onlineRole&&ts-lastInputSend>35){lastInputSend=ts;sendOnline('input',localInputPacket());}
+ if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>50){lastStateSend=ts;sendOnline('state',packState());}
+ if(onlineRole==='guest'&&onlineConnected){lastCorrection=ts;smoothRemoteCorrection();}
+ const drawInterval=16;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}requestAnimationFrame(loop)}
 window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();keys[k]=true;});window.addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;keys[k]=false;});document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();keys[k]=true},off=e=>{e.preventDefault();keys[k]=false};b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off));});function setMode(mode){document.body.classList.toggle('phone-mode',mode==='phone');document.body.classList.toggle('pc-mode',mode==='pc');$('phoneMode').classList.toggle('active',mode==='phone');$('pcMode').classList.toggle('active',mode==='pc');$('modeHint').textContent=mode==='phone'?'Telefon modu: çevrim içi maçta yalnızca kendi tuşların görünür.':'PC modu: klavye ile oynayın.';try{localStorage.setItem('mkw_headball_mode',mode)}catch(e){}}
 $('phoneMode').onclick=()=>setMode('phone');$('pcMode').onclick=()=>setMode('pc');
 let preferredMode='pc';try{preferredMode=localStorage.getItem('mkw_headball_mode')||(matchMedia('(max-width: 700px), (pointer: coarse)').matches?'phone':'pc')}catch(e){}setMode(preferredMode);
