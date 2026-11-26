@@ -120,15 +120,24 @@
    pointer-events:auto!important;touch-action:none!important;
    user-select:none!important;-webkit-user-select:none!important;
  }
- /* Sol başparmak: geri, zıpla, ileri */
- body.online-playing .wrap .controls .control-card .touch button:nth-child(1){left:max(14px,env(safe-area-inset-left))!important;right:auto!important}
- body.online-playing .wrap .controls .control-card .touch button:nth-child(2){left:calc(max(14px,env(safe-area-inset-left)) + clamp(54px,9vw,76px) + 9px)!important;right:auto!important}
- body.online-playing .wrap .controls .control-card .touch button:nth-child(3){left:calc(max(14px,env(safe-area-inset-left)) + 2 * (clamp(54px,9vw,76px) + 9px))!important;right:auto!important}
+ /* Sol başparmak için D-pad: sol ve sağ yan yana, zıplama üstte ortada */
+ body.online-playing .wrap .controls .control-card .touch button:nth-child(1){
+   left:max(16px,env(safe-area-inset-left))!important;right:auto!important;
+   bottom:max(16px,env(safe-area-inset-bottom))!important;
+ }
+ body.online-playing .wrap .controls .control-card .touch button:nth-child(3){
+   left:calc(max(16px,env(safe-area-inset-left)) + 68px)!important;right:auto!important;
+   bottom:max(16px,env(safe-area-inset-bottom))!important;
+ }
+ body.online-playing .wrap .controls .control-card .touch button:nth-child(2){
+   left:calc(max(16px,env(safe-area-inset-left)) + 34px)!important;right:auto!important;
+   bottom:calc(max(16px,env(safe-area-inset-bottom)) + 66px)!important;
+ }
  /* Sağ başparmak: şut */
  body.online-playing .wrap .controls .control-card .touch button:nth-child(4){
-   left:auto!important;right:max(18px,env(safe-area-inset-right))!important;
-   bottom:max(14px,env(safe-area-inset-bottom))!important;
-   width:clamp(68px,11vw,92px)!important;height:clamp(68px,15vh,88px)!important;
+   left:auto!important;right:max(20px,env(safe-area-inset-right))!important;
+   bottom:max(18px,env(safe-area-inset-bottom))!important;
+   width:clamp(70px,11vw,94px)!important;height:clamp(70px,15vh,92px)!important;
    border-radius:50%!important;background:linear-gradient(135deg,#8066ed,#4386f5)!important;
    border:2px solid rgba(255,255,255,.55)!important;
  }
@@ -286,7 +295,7 @@ async function connectRoom(role,code){
 $('createRoom').onclick=()=>{const code=String(Math.floor(100000+Math.random()*900000));$('roomCode').textContent=code;$('roomCodeBox').hidden=false;$('confirmCreateRoom').hidden=false;setOnlineStatus('Oda şifren hazır. Şifreyi Kadir’e gönder; ardından “Bu şifreyle odayı oluştur” düğmesine bas.');}; $('confirmCreateRoom').onclick=()=>{const code=$('roomCode').textContent.trim();if(/^\d{6}$/.test(code))connectRoom('host',code);};
 $('joinRoom').onclick=()=>{const code=$('roomInput').value.trim().toUpperCase();if(!/^\d{6}$/.test(code)){setOnlineStatus('Lütfen 6 karakterli geçerli oda kodunu gir.');return;}connectRoom('guest',code);};
 $('copyRoom').onclick=()=>{const code=$('roomCode').textContent;navigator.clipboard?.writeText(code).then(()=>setOnlineStatus('Oda kodu kopyalandı. Kadir’e gönder!')).catch(()=>setOnlineStatus('Oda kodun: '+code));};
-function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=ts;physics(dt);if(onlineRole==='host'&&onlineConnected&&ts-lastStateSend>50){lastStateSend=ts;sendOnline('state',packState());}if(onlineRole==='guest'&&onlineConnected&&ts-lastStateSend>65){lastStateSend=ts;sendOnline('input',{keys:{a:!!keys.a,d:!!keys.d,w:!!keys.w,f:!!keys.f,ArrowLeft:!!keys.ArrowLeft,ArrowRight:!!keys.ArrowRight,ArrowUp:!!keys.ArrowUp,l:!!keys.l}});}draw();requestAnimationFrame(loop)}
+let lastDraw=0;function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=ts;physics(dt);if(onlineRole==='host'&&onlineConnected&&ts-lastStateSend>50){lastStateSend=ts;sendOnline('state',packState());}if(onlineRole==='guest'&&onlineConnected&&ts-lastStateSend>65){lastStateSend=ts;sendOnline('input',{keys:{a:!!keys.a,d:!!keys.d,w:!!keys.w,f:!!keys.f,ArrowLeft:!!keys.ArrowLeft,ArrowRight:!!keys.ArrowRight,ArrowUp:!!keys.ArrowUp,l:!!keys.l}});}const drawInterval=matchMedia('(pointer:coarse)').matches?16:22;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}requestAnimationFrame(loop)}
 window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();keys[k]=true;});window.addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;keys[k]=false;});document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();keys[k]=true},off=e=>{e.preventDefault();keys[k]=false};b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off));});function setMode(mode){document.body.classList.toggle('phone-mode',mode==='phone');document.body.classList.toggle('pc-mode',mode==='pc');$('phoneMode').classList.toggle('active',mode==='phone');$('pcMode').classList.toggle('active',mode==='pc');$('modeHint').textContent=mode==='phone'?'Telefon modu: çevrim içi maçta yalnızca kendi tuşların görünür.':'PC modu: klavye ile oynayın.';try{localStorage.setItem('mkw_headball_mode',mode)}catch(e){}}
 $('phoneMode').onclick=()=>setMode('phone');$('pcMode').onclick=()=>setMode('pc');
 let preferredMode='pc';try{preferredMode=localStorage.getItem('mkw_headball_mode')||(matchMedia('(max-width: 700px), (pointer: coarse)').matches?'phone':'pc')}catch(e){}setMode(preferredMode);
