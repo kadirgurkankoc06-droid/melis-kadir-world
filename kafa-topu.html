@@ -66,6 +66,9 @@
 }
 
 
+
+/* Kesin oyuncu paneli görünürlüğü: hidden niteliği diğer stillerden önceliklidir. */
+.controls .control-card[hidden]{display:none!important}
 </style></head><body><div id="rotateNotice"><div class="noticeCard"><span class="rotateIcon">📱↻</span><h2>Telefonu yatay çevir</h2><p>Kafa Topu'nu daha geniş saha ve rahat kontrol tuşlarıyla oynamak için telefonu yatay konuma getir.</p><button type="button" id="landscapeBtn">Tam ekran dene</button></div></div><main class="wrap"><header class="top"><div class="brand">MELİS & KADİR WORLD<small>PLAY · EXPLORE · REMEMBER</small></div><a class="back" href="index.html">← Siteye dön</a></header><section class="hero"><h1>⚽ MELİS <span style="color:#ffd36a">VS</span> KADİR</h1><p>İki kişilik kafa topu mücadelesi. Bakalım kim kazanacak?</p></section>
 <div class="modebar" role="group" aria-label="Oyun modu"><span>Nasıl oynayalım?</span><button type="button" id="phoneMode" class="modebtn">📱 Telefon</button><button type="button" id="pcMode" class="modebtn">💻 PC</button><small id="modeHint">Telefon modu: iki oyuncu ekrandaki tuşlarla oynar.</small></div>
 <section class="online-panel" id="onlinePanel">
@@ -181,14 +184,26 @@ function packState(){return {p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onG
 function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;Object.assign(p1,s.p1);Object.assign(p2,s.p2);Object.assign(ball,s.ball);score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;$('message').textContent=s.message||'';$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';}
 function sendOnline(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
 function setOnlineStatus(t){$('onlineStatus').textContent=t;}
-function disconnectOnline(){if(onlineChannel&&supabaseClient)supabaseClient.removeChannel(onlineChannel);onlineChannel=null;onlineRole=null;onlineRoom=null;remoteKeys={};onlineConnected=false;document.body.classList.remove('online-guest','online-host','online-playing');$('roomCodeBox').hidden=true;$('createRoom').disabled=false;$('joinRoom').disabled=false;setOnlineStatus('Çevrim içi oynamak için bir kişi oda oluşturur, diğeri oda kodunu girer.');}
-async function connectRoom(role,code){if(!supabaseClient){setOnlineStatus('Bağlantı kütüphanesi yüklenemedi. Sayfayı yenileyip tekrar dene.');return;}disconnectOnline();onlineRole=role;onlineRoom=code;document.body.classList.add('online-playing');setOnlineStatus('Odaya bağlanılıyor…');$('createRoom').disabled=true;$('joinRoom').disabled=true;document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');
+function disconnectOnline(){if(onlineChannel&&supabaseClient)supabaseClient.removeChannel(onlineChannel);onlineChannel=null;onlineRole=null;onlineRoom=null;remoteKeys={};onlineConnected=false;document.body.classList.remove('online-guest','online-host','online-playing');document.querySelectorAll('.controls .control-card').forEach(card=>{card.hidden=false;card.style.removeProperty('display')});$('roomCodeBox').hidden=true;$('createRoom').disabled=false;$('joinRoom').disabled=false;setOnlineStatus('Çevrim içi oynamak için bir kişi oda oluşturur, diğeri oda kodunu girer.');}
+function setRoleControlVisibility(role){
+ const cards=document.querySelectorAll('.controls .control-card');
+ cards.forEach((card,i)=>{
+   const shouldHide=(role==='host'&&i===1)||(role==='guest'&&i===0);
+   card.hidden=shouldHide;
+   if(shouldHide) card.style.setProperty('display','none','important');
+   else card.style.removeProperty('display');
+ });
+ const controls=document.querySelector('.controls');
+ if(controls) controls.style.setProperty('grid-template-columns','minmax(0,1fr)','important');
+}
+
+async function connectRoom(role,code){if(!supabaseClient){setOnlineStatus('Bağlantı kütüphanesi yüklenemedi. Sayfayı yenileyip tekrar dene.');return;}disconnectOnline();onlineRole=role;onlineRoom=code;document.body.classList.add('online-playing');setRoleControlVisibility(role);setOnlineStatus('Odaya bağlanılıyor…');$('createRoom').disabled=true;$('joinRoom').disabled=true;document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');
  const ch=supabaseClient.channel('mkw-headball-'+code,{config:{broadcast:{self:false},private:false}});onlineChannel=ch;
  ch.on('broadcast',{event:'input'},({payload})=>{if(onlineRole==='host'&&payload&&payload.keys)remoteKeys=payload.keys;});
  ch.on('broadcast',{event:'state'},({payload})=>{if(onlineRole==='guest')applyState(payload);});
  ch.on('broadcast',{event:'hello'},()=>{if(onlineRole==='host'){newGame();sendOnline('state',packState());setOnlineStatus('Kadir bağlandı! Maç başladı. 💜');}});
  ch.on('broadcast',{event:'leave'},()=>{if(onlineRole==='host')setOnlineStatus('Diğer oyuncu odadan ayrıldı. Kodla tekrar katılabilir.');});
- ch.subscribe(status=>{if(status==='SUBSCRIBED'){onlineConnected=true;document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');if(role==='host'){$('roomCode').textContent=code;$('roomCodeBox').hidden=false;setOnlineStatus('Oda hazır! Kadir bu kodu kendi cihazında girsin. Sen MELİS olarak oynayacaksın.');newGame();}else{document.body.classList.add('online-guest');setOnlineStatus('Odaya bağlandın! Kadir olarak oynuyorsun. Melis’in maçı başlatmasını bekle.');sendOnline('hello',{name:'KADİR'});}}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setOnlineStatus('Bağlantı kurulamadı. Supabase Realtime ayarlarını kontrol edeceğiz.');$('createRoom').disabled=false;$('joinRoom').disabled=false;}});
+ ch.subscribe(status=>{if(status==='SUBSCRIBED'){onlineConnected=true;document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');setRoleControlVisibility(role);if(role==='host'){$('roomCode').textContent=code;$('roomCodeBox').hidden=false;setOnlineStatus('Oda hazır! Kadir bu kodu kendi cihazında girsin. Sen MELİS olarak oynayacaksın.');newGame();}else{document.body.classList.add('online-guest');setOnlineStatus('Odaya bağlandın! Kadir olarak oynuyorsun. Melis’in maçı başlatmasını bekle.');sendOnline('hello',{name:'KADİR'});}}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setOnlineStatus('Bağlantı kurulamadı. Supabase Realtime ayarlarını kontrol edeceğiz.');$('createRoom').disabled=false;$('joinRoom').disabled=false;}});
 }
 $('createRoom').onclick=()=>{const code=Math.random().toString(36).slice(2,8).toUpperCase();connectRoom('host',code);};
 $('joinRoom').onclick=()=>{const code=$('roomInput').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(code)){setOnlineStatus('Lütfen 6 karakterli geçerli oda kodunu gir.');return;}connectRoom('guest',code);};
