@@ -243,26 +243,30 @@ ball.vy+=gravity*.9*step;ball.x+=ball.vx*step;ball.y+=ball.vy*step;ball.vx*=Math
 collideBallWithPlayer(p1);collideBallWithPlayer(p2);
 if(ball.y+ball.r>ground){ball.y=ground-ball.r;if(Math.abs(ball.vy)>1.7)ball.vy*=-.62;else ball.vy=0;ball.vx*=.982;if(Math.abs(ball.vx)<.035)ball.vx=0;}
 if(ball.y-ball.r<15){ball.y=15+ball.r;ball.vy=Math.abs(ball.vy)*.8;}
-// Kale direkleri: top direğe veya üst direğe çarparsa sekerek sahaya döner.
-function collideBallSegment(x1,y1,x2,y2){
+// Kale çerçevesi: üst direk ve görünen yan dikmeler topa fiziksel olarak çarpar.
+const goalY=ground-145, postR=7, restitution=.72;
+function collideBallSegment(x1,y1,x2,y2,radius=postR){
  const sx=x2-x1,sy=y2-y1,len2=sx*sx+sy*sy;
- const t=Math.max(0,Math.min(1,((ball.x-x1)*sx+(ball.y-y1)*sy)/len2));
+ const t=len2?Math.max(0,Math.min(1,((ball.x-x1)*sx+(ball.y-y1)*sy)/len2)):0;
  const qx=x1+t*sx,qy=y1+t*sy,dx=ball.x-qx,dy=ball.y-qy;
- const dist=Math.hypot(dx,dy),min=ball.r+5;
+ const dist=Math.hypot(dx,dy),min=ball.r+radius;
  if(dist>=min)return;
  let nx,ny;if(dist<.001){const sl=Math.hypot(sx,sy)||1;nx=-sy/sl;ny=sx/sl;}else{nx=dx/dist;ny=dy/dist;}
  ball.x=qx+nx*min;ball.y=qy+ny*min;
  const vn=ball.vx*nx+ball.vy*ny;
- if(vn<0){ball.vx-=(1+.72)*vn*nx;ball.vy-=(1+.72)*vn*ny;}
+ if(vn<0){ball.vx-=(1+restitution)*vn*nx;ball.vy-=(1+restitution)*vn*ny;}
 }
-// Kale ağzının üst direği topa çarpışma uygular; gol çizgisi açık kalır.
-collideBallSegment(8,ground-145,98,ground-145);
-collideBallSegment(W-98,ground-145,W-8,ground-145);
-// Yan saha duvarları; kale ağzına giren top kale çerçevesiyle etkileşir.
-if(ball.x-ball.r<10&&ball.y<=ground-145+ball.r){ball.x=10+ball.r;ball.vx=Math.abs(ball.vx)*.8;}
-if(ball.x+ball.r>W-10&&ball.y<=ground-145+ball.r){ball.x=W-10-ball.r;ball.vx=-Math.abs(ball.vx)*.8;}
-// Gol: top, ön kale çizgisini tamamen geçmeli ve üst direğin altından girmeli.
-const goalTop=ground-145+ball.r+5,goalBottom=ground-ball.r-2;
+// Üst traversler.
+collideBallSegment(8,goalY,98,goalY);
+collideBallSegment(W-98,goalY,W-8,goalY);
+// Ön dikmelerin üst birleşim noktaları (topun dikmeye sürtüp içeri ışınlanmasını önler).
+function collidePost(cx,cy){const dx=ball.x-cx,dy=ball.y-cy,d=Math.hypot(dx,dy),min=ball.r+postR;if(d>=min)return;const nx=d<.001?1:dx/d,ny=d<.001?0:dy/d;ball.x=cx+nx*min;ball.y=cy+ny*min;const vn=ball.vx*nx+ball.vy*ny;if(vn<0){ball.vx-=(1+restitution)*vn*nx;ball.vy-=(1+restitution)*vn*ny;}}
+collidePost(98,goalY);collidePost(W-98,goalY);
+// Kale ağının arka dikmeleri: top kale hacmine girdikten sonra ağın gerisinden çıkamaz.
+if(ball.x-ball.r<8&&ball.y>goalY+ball.r&&ball.y<ground-ball.r){ball.x=8+ball.r;if(ball.vx<0)ball.vx=Math.abs(ball.vx)*.35;ball.vy*=.82;}
+if(ball.x+ball.r>W-8&&ball.y>goalY+ball.r&&ball.y<ground-ball.r){ball.x=W-8-ball.r;if(ball.vx>0)ball.vx=-Math.abs(ball.vx)*.35;ball.vy*=.82;}
+// Gol yalnızca top ön çizgiyi bütünüyle geçtiğinde ve kale açıklığının içinde kaldığında verilir.
+const goalTop=goalY+ball.r+postR,goalBottom=ground-ball.r-2;
 if(ball.x+ball.r<98&&ball.y>goalTop&&ball.y<goalBottom){score2++;goal('Kadir gol attı! ⚡');}
 else if(ball.x-ball.r>W-98&&ball.y>goalTop&&ball.y<goalBottom){score1++;goal('Melis gol attı! 💜');}
 $('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;
