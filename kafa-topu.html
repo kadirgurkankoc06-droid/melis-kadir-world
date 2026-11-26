@@ -167,8 +167,12 @@ const c=document.getElementById('game'),ctx=c.getContext('2d'),W=c.width,H=c.hei
 const $=id=>document.getElementById(id);
 function player(x,name,color,hair,dir){return{x,y:ground,vx:0,vy:0,r:32,name,color,hair,dir,onGround:true,cool:0}}
 function resetPositions(){p1=player(430,'MELİS','#a78bfa','#39246f',1);p2=player(570,'KADİR','#41d9df','#172e55',-1);ball={x:W/2,y:ground-70,vx:0,vy:0,r:22};}
-function newGame(){score1=score2=0;time=90;paused=false;ended=false;goalFlash=0;rematchRequested=false;guestRematchRequested=false;remoteTarget=null;$('matchEnd').hidden=true;resetPositions();$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent='01:30';$('message').textContent='Maç başladı! Topa yaklaş ve şut tuşuna bas.';$('pause').textContent='⏸ Duraklat';}
-function down(k){return !!keys[k] || (onlineRole==='host' && !!remoteKeys[k])}
+function newGame(){score1=score2=0;time=90;paused=false;ended=false;goalFlash=0;rematchRequested=false;guestRematchRequested=false;remoteTarget=null;remoteKeys={};$('matchEnd').hidden=true;resetPositions();$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent='01:30';$('message').textContent='Maç başladı! Topa yaklaş ve şut tuşuna bas.';$('pause').textContent='⏸ Duraklat';}
+function downFor(playerIndex,k){
+ if(!onlineRole)return !!keys[k];
+ const isRemote=(onlineRole==='host'&&playerIndex===1)||(onlineRole==='guest'&&playerIndex===0);
+ return isRemote?!!remoteKeys[k]:!!keys[k];
+}
 
 function collideBallWithPlayer(p){
  // Kafa + gövde tek bir kapsül gibi davranır; topun içeri girmesi engellenir.
@@ -198,12 +202,12 @@ function collideBallWithPlayer(p){
    }
  }
 }
-function physics(dt){if(onlineRole==='guest')return;if(paused||ended)return;const step=Math.min(dt,0.03)*60;time-=dt;if(time<=0){time=0;ended=true;showMatchEnd();$('message').textContent=score1===score2?'Berabere! Rövanş zamanı.':score1>score2?'Melis kazandı! 💜🏆':'Kadir kazandı! ⚡🏆';}
+function physics(dt){if(paused||ended)return;if(onlineRole==='host'&&!opponentJoined)return;const step=Math.min(dt,0.03)*60;time-=dt;if(time<=0){time=0;ended=true;showMatchEnd();$('message').textContent=score1===score2?'Berabere! Rövanş zamanı.':score1>score2?'Melis kazandı! 💜🏆':'Kadir kazandı! ⚡🏆';}
 const gravity=.52;
-for(const [p,left,right,jump,shot] of [[p1,'a','d','w','f'],[p2,'ArrowLeft','ArrowRight','ArrowUp','l']]){
- p.cool=Math.max(0,p.cool-dt);let ax=0;if(down(left))ax=-.72;if(down(right))ax=.72;p.vx+=ax*step;p.vx*=Math.pow(.84,step);p.vx=Math.max(-7,Math.min(7,p.vx));p.x+=p.vx*step;p.x=Math.max(55,Math.min(W-55,p.x));
- if(down(jump)&&p.onGround){p.vy=-12.7;p.onGround=false;}p.vy+=gravity*step;p.y+=p.vy*step;if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true;}
- if(down(shot)&&p.cool<=0){const dx=ball.x-p.x,dy=ball.y-(p.y-78),dist=Math.hypot(dx,dy);if(dist<125){let dir=dx===0?p.dir:Math.sign(dx);ball.vx+=dir*12+p.vx*.65;ball.vy-=10.5;p.cool=.32;}}
+for(const [playerIndex,p,left,right,jump,shot] of [[0,p1,'a','d','w','f'],[1,p2,'ArrowLeft','ArrowRight','ArrowUp','l']]){
+ p.cool=Math.max(0,p.cool-dt);let ax=0;if(downFor(playerIndex,left))ax=-.72;if(downFor(playerIndex,right))ax=.72;p.vx+=ax*step;p.vx*=Math.pow(.84,step);p.vx=Math.max(-7,Math.min(7,p.vx));p.x+=p.vx*step;p.x=Math.max(55,Math.min(W-55,p.x));
+ if(downFor(playerIndex,jump)&&p.onGround){p.vy=-12.7;p.onGround=false;}p.vy+=gravity*step;p.y+=p.vy*step;if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true;}
+ if(downFor(playerIndex,shot)&&p.cool<=0){const dx=ball.x-p.x,dy=ball.y-(p.y-78),dist=Math.hypot(dx,dy);if(dist<125){let dir=dx===0?p.dir:Math.sign(dx);ball.vx+=dir*12+p.vx*.65;ball.vy-=10.5;p.cool=.32;}}
  // Karakterin tamamı için kapsül çarpışması: kafa + gövde. Top içinden geçemez.
  collideBallWithPlayer(p);
 }
@@ -302,7 +306,7 @@ async function connectRoom(role,code){
  const orientationTask=enterMatchOrientation();
  if(!supabaseClient){setOnlineStatus('Bağlantı kütüphanesi yüklenemedi. Sayfayı yenileyip tekrar dene.');return;}disconnectOnline();onlineRole=role;onlineRoom=code;setOnlineStatus('Odaya bağlanılıyor…');$('createRoom').disabled=true;$('joinRoom').disabled=true;document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');
  const ch=supabaseClient.channel('mkw-headball-'+code,{config:{broadcast:{self:false},private:false}});onlineChannel=ch;
- ch.on('broadcast',{event:'input'},({payload})=>{if(onlineRole==='host'&&payload&&payload.keys)remoteKeys=payload.keys;});
+ ch.on('broadcast',{event:'input'},({payload})=>{if(payload&&payload.keys)remoteKeys=payload.keys;});
  ch.on('broadcast',{event:'state'},({payload})=>{if(onlineRole==='guest')applyState(payload);});
  ch.on('broadcast',{event:'hello'},()=>{if(onlineRole==='host'){opponentJoined=true;newGame();paused=false;$('message').textContent='Kadir bağlandı! Maç başlıyor. 💜';sendOnline('state',packState());setOnlineStatus('Kadir bağlandı! Maç başladı. 💜');}});
  ch.on('broadcast',{event:'rematch-request'},()=>{if(onlineRole==='host'){rematchRequested=true;$('message').textContent='Kadir rövanş istiyor! 💜';if(ended)showMatchEnd();}});
@@ -313,7 +317,14 @@ async function connectRoom(role,code){
 $('createRoom').onclick=()=>{const code=String(Math.floor(100000+Math.random()*900000));$('roomCode').textContent=code;$('roomCodeBox').hidden=false;$('confirmCreateRoom').hidden=false;setOnlineStatus('Oda şifren hazır. Şifreyi Kadir’e gönder; ardından “Bu şifreyle odayı oluştur” düğmesine bas.');}; $('confirmCreateRoom').onclick=()=>{const code=$('roomCode').textContent.trim();if(/^\d{6}$/.test(code))connectRoom('host',code);};
 $('joinRoom').onclick=()=>{const code=$('roomInput').value.trim().toUpperCase();if(!/^\d{6}$/.test(code)){setOnlineStatus('Lütfen 6 karakterli geçerli oda kodunu gir.');return;}connectRoom('guest',code);};
 $('copyRoom').onclick=()=>{const code=$('roomCode').textContent;navigator.clipboard?.writeText(code).then(()=>setOnlineStatus('Oda kodu kopyalandı. Kadir’e gönder!')).catch(()=>setOnlineStatus('Oda kodun: '+code));};
-let lastDraw=0;function loop(ts){if(onlineRole==='guest'&&remoteTarget){const t=remoteTarget,k=.28;for(const [obj,target] of [[p1,t.p1],[p2,t.p2],[ball,t.ball]])for(const key of Object.keys(target))if(typeof target[key]==='number')obj[key]+=(target[key]-obj[key])*k;else obj[key]=target[key];}const dt=Math.min((ts-last)/1000||0,0.04);last=ts;physics(dt);if(onlineRole==='host'&&onlineConnected&&ts-lastStateSend>33){lastStateSend=ts;sendOnline('state',packState());}if(onlineRole==='guest'&&onlineConnected&&ts-lastStateSend>33){lastStateSend=ts;sendOnline('input',{keys:{a:!!keys.a,d:!!keys.d,w:!!keys.w,f:!!keys.f,ArrowLeft:!!keys.ArrowLeft,ArrowRight:!!keys.ArrowRight,ArrowUp:!!keys.ArrowUp,l:!!keys.l}});}const drawInterval=matchMedia('(pointer:coarse)').matches?16:22;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}requestAnimationFrame(loop)}
+let lastDraw=0,lastInputSend=0,lastCorrection=0;
+function localInputPacket(){return {keys:onlineRole==='host'?{a:!!keys.a,d:!!keys.d,w:!!keys.w,f:!!keys.f}:{ArrowLeft:!!keys.ArrowLeft,ArrowRight:!!keys.ArrowRight,ArrowUp:!!keys.ArrowUp,l:!!keys.l}};}
+function smoothRemoteCorrection(){if(onlineRole!=='guest'||!remoteTarget)return;const t=remoteTarget,k=.24;for(const [obj,target] of [[p1,t.p1],[p2,t.p2],[ball,t.ball]])for(const key of Object.keys(target))if(typeof target[key]==='number')obj[key]+=(target[key]-obj[key])*k;else obj[key]=target[key];}
+function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=ts;physics(dt);
+ if(onlineConnected&&onlineRole&&ts-lastInputSend>45){lastInputSend=ts;sendOnline('input',localInputPacket());}
+ if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>120){lastStateSend=ts;sendOnline('state',packState());}
+ if(onlineRole==='guest'&&onlineConnected&&ts-lastCorrection>120){lastCorrection=ts;smoothRemoteCorrection();}
+ const drawInterval=matchMedia('(pointer:coarse)').matches?16:22;if(ts-lastDraw>=drawInterval){lastDraw=ts;draw();}requestAnimationFrame(loop)}
 window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();keys[k]=true;});window.addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;keys[k]=false;});document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();keys[k]=true},off=e=>{e.preventDefault();keys[k]=false};b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off));});function setMode(mode){document.body.classList.toggle('phone-mode',mode==='phone');document.body.classList.toggle('pc-mode',mode==='pc');$('phoneMode').classList.toggle('active',mode==='phone');$('pcMode').classList.toggle('active',mode==='pc');$('modeHint').textContent=mode==='phone'?'Telefon modu: çevrim içi maçta yalnızca kendi tuşların görünür.':'PC modu: klavye ile oynayın.';try{localStorage.setItem('mkw_headball_mode',mode)}catch(e){}}
 $('phoneMode').onclick=()=>setMode('phone');$('pcMode').onclick=()=>setMode('pc');
 let preferredMode='pc';try{preferredMode=localStorage.getItem('mkw_headball_mode')||(matchMedia('(max-width: 700px), (pointer: coarse)').matches?'phone':'pc')}catch(e){}setMode(preferredMode);
