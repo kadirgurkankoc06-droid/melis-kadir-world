@@ -120,24 +120,22 @@
    pointer-events:auto!important;touch-action:none!important;
    user-select:none!important;-webkit-user-select:none!important;
  }
- /* Sol başparmak için D-pad: sol ve sağ yan yana, zıplama üstte ortada */
+ /* Sol başparmak D-pad: sol/sağ yan yana, zıplama ortada üstte */
  body.online-playing .wrap .controls .control-card .touch button:nth-child(1){
-   left:max(16px,env(safe-area-inset-left))!important;right:auto!important;
-   bottom:max(16px,env(safe-area-inset-bottom))!important;
+   left:max(18px,env(safe-area-inset-left))!important;right:auto!important;
+   bottom:max(18px,env(safe-area-inset-bottom))!important;width:58px!important;height:58px!important;
  }
  body.online-playing .wrap .controls .control-card .touch button:nth-child(3){
-   left:calc(max(16px,env(safe-area-inset-left)) + 68px)!important;right:auto!important;
-   bottom:max(16px,env(safe-area-inset-bottom))!important;
+   left:calc(max(18px,env(safe-area-inset-left)) + 70px)!important;right:auto!important;
+   bottom:max(18px,env(safe-area-inset-bottom))!important;width:58px!important;height:58px!important;
  }
  body.online-playing .wrap .controls .control-card .touch button:nth-child(2){
-   left:calc(max(16px,env(safe-area-inset-left)) + 34px)!important;right:auto!important;
-   bottom:calc(max(16px,env(safe-area-inset-bottom)) + 66px)!important;
+   left:calc(max(18px,env(safe-area-inset-left)) + 35px)!important;right:auto!important;
+   bottom:calc(max(18px,env(safe-area-inset-bottom)) + 70px)!important;width:58px!important;height:58px!important;
  }
- /* Sağ başparmak: şut */
  body.online-playing .wrap .controls .control-card .touch button:nth-child(4){
-   left:auto!important;right:max(20px,env(safe-area-inset-right))!important;
-   bottom:max(18px,env(safe-area-inset-bottom))!important;
-   width:clamp(70px,11vw,94px)!important;height:clamp(70px,15vh,92px)!important;
+   left:auto!important;right:max(22px,env(safe-area-inset-right))!important;
+   bottom:max(20px,env(safe-area-inset-bottom))!important;width:82px!important;height:82px!important;
    border-radius:50%!important;background:linear-gradient(135deg,#8066ed,#4386f5)!important;
    border:2px solid rgba(255,255,255,.55)!important;
  }
@@ -195,7 +193,7 @@ function collideBallWithPlayer(p){
    }
  }
 }
-function physics(dt){if(onlineRole==='guest')return;if(paused||ended)return;const step=Math.min(dt,0.03)*60;time-=dt;if(time<=0){time=0;ended=true;$('message').textContent=score1===score2?'Berabere! Rövanş zamanı.':score1>score2?'Melis kazandı! 💜🏆':'Kadir kazandı! ⚡🏆';}
+function physics(dt){if(onlineRole==='guest')return;if(paused||ended)return;const step=Math.min(dt,0.03)*60;time-=dt;if(time<=0){time=0;ended=true;$('rematchRequest').hidden=false;$('message').textContent=score1===score2?'Berabere! Rövanş zamanı.':score1>score2?'Melis kazandı! 💜🏆':'Kadir kazandı! ⚡🏆';}
 const gravity=.52;
 for(const [p,left,right,jump,shot] of [[p1,'a','d','w','f'],[p2,'ArrowLeft','ArrowRight','ArrowUp','l']]){
  p.cool=Math.max(0,p.cool-dt);let ax=0;if(down(left))ax=-.72;if(down(right))ax=.72;p.vx+=ax*step;p.vx*=Math.pow(.84,step);p.vx=Math.max(-7,Math.min(7,p.vx));p.x+=p.vx*step;p.x=Math.max(55,Math.min(W-55,p.x));
@@ -215,7 +213,7 @@ if(ball.x-ball.r<10&&!(ball.y>ground-145)){ball.x=10+ball.r;ball.vx=Math.abs(bal
 if(ball.x<40&&ball.y>ground-145){score2++;goal('Kadir gol attı! ⚡');}else if(ball.x>W-40&&ball.y>ground-145){score1++;goal('Melis gol attı! 💜');}
 $('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;
 }
-function goal(msg){$('s1').textContent=score1;$('s2').textContent=score2;$('message').textContent=msg;goalFlash=1;resetPositions();if(score1>=5||score2>=5){ended=true;$('message').textContent=score1>score2?'Melis maçı kazandı! 💜🏆':'Kadir maçı kazandı! ⚡🏆';}}
+function goal(msg){$('s1').textContent=score1;$('s2').textContent=score2;$('message').textContent=msg;goalFlash=1;resetPositions();if(score1>=5||score2>=5){ended=true;$('rematchRequest').hidden=false;$('message').textContent=score1>score2?'Melis maçı kazandı! 💜🏆':'Kadir maçı kazandı! ⚡🏆';}}
 function rounded(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 // Fotoğraflar yerel oyun varlıkları olarak yüklenir; yüzler dairesel kafa alanında gösterilir.
 const melisAvatar=new Image();melisAvatar.src='melis-avatar.png';
@@ -254,7 +252,7 @@ ctx.save();ctx.translate(ball.x,ball.y);ctx.fillStyle='#fff';ctx.beginPath();ctx
 if(paused||ended){ctx.fillStyle='#07111dcc';ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='900 42px system-ui';ctx.fillText(paused?'DURAKLATILDI':(score1===score2&&time===0?'BERABERE':'MAÇ BİTTİ'),W/2,H/2-8);ctx.font='bold 20px system-ui';ctx.fillText(`${score1}  -  ${score2}`,W/2,H/2+32);}
 }
 function packState(){return {p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
-function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;Object.assign(p1,s.p1);Object.assign(p2,s.p2);Object.assign(ball,s.ball);score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;$('message').textContent=s.message||'';$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';}
+function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;Object.assign(p1,s.p1);Object.assign(p2,s.p2);Object.assign(ball,s.ball);score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;$('s1').textContent=score1;$('s2').textContent=score2;$('timer').textContent=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;$('message').textContent=s.message||'';$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';$('rematchRequest').hidden=!ended;$('rematchRequest').textContent='🤝 Rövanş istiyorum';}
 function sendOnline(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
 function setOnlineStatus(t){$('onlineStatus').textContent=t;}
 function disconnectOnline(){if(onlineChannel&&supabaseClient)supabaseClient.removeChannel(onlineChannel);onlineChannel=null;onlineRole=null;onlineRoom=null;remoteKeys={};onlineConnected=false;document.body.classList.remove('online-guest','online-host','online-playing');document.querySelectorAll('.controls .control-card').forEach(card=>{card.hidden=false;card.style.removeProperty('display')});$('roomCodeBox').hidden=true;$('confirmCreateRoom').hidden=false;$('createRoom').disabled=false;$('joinRoom').disabled=false;setOnlineStatus('Çevrim içi oynamak için bir kişi oda oluşturur, diğeri oda kodunu girer.');}
@@ -288,9 +286,11 @@ async function connectRoom(role,code){
  const ch=supabaseClient.channel('mkw-headball-'+code,{config:{broadcast:{self:false},private:false}});onlineChannel=ch;
  ch.on('broadcast',{event:'input'},({payload})=>{if(onlineRole==='host'&&payload&&payload.keys)remoteKeys=payload.keys;});
  ch.on('broadcast',{event:'state'},({payload})=>{if(onlineRole==='guest')applyState(payload);});
- ch.on('broadcast',{event:'hello'},()=>{if(onlineRole==='host'){newGame();sendOnline('state',packState());setOnlineStatus('Kadir bağlandı! Maç başladı. 💜');}});
+ ch.on('broadcast',{event:'hello'},()=>{if(onlineRole==='host'){remoteKeys.__joined=true;newGame();paused=false;$('message').textContent='Kadir bağlandı! Maç başlıyor. 💜';sendOnline('state',packState());setOnlineStatus('Kadir bağlandı! Maç başladı. 💜');}});
+ ch.on('broadcast',{event:'rematch-request'},()=>{if(onlineRole==='host'){$('message').textContent='Kadir rövanş istiyor! 💜';$('rematchRequest').hidden=false;$('rematchRequest').textContent='⚽ Rövanşı başlat';}});
+ ch.on('broadcast',{event:'rematch-start'},()=>{if(onlineRole==='guest'){newGame();$('rematchRequest').hidden=true;}});
  ch.on('broadcast',{event:'leave'},()=>{if(onlineRole==='host')setOnlineStatus('Diğer oyuncu odadan ayrıldı. Kodla tekrar katılabilir.');});
- ch.subscribe(status=>{if(status==='SUBSCRIBED'){onlineConnected=true;document.body.classList.add('online-playing');document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');setRoleControlVisibility(role);if(role==='host'){$('roomCode').textContent=code;$('roomCodeBox').hidden=false;setOnlineStatus('Oda hazır! Kadir bu kodu kendi cihazında girsin. Sen MELİS olarak oynayacaksın.');newGame();}else{document.body.classList.add('online-guest');setOnlineStatus('Odaya bağlandın! Kadir olarak oynuyorsun. Melis’in maçı başlatmasını bekle.');sendOnline('hello',{name:'KADİR'});}}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setOnlineStatus('Bağlantı kurulamadı. Supabase Realtime ayarlarını kontrol edeceğiz.');$('createRoom').disabled=false;$('joinRoom').disabled=false;}});
+ ch.subscribe(status=>{if(status==='SUBSCRIBED'){onlineConnected=true;document.body.classList.add('online-playing');document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');setRoleControlVisibility(role);if(role==='host'){$('roomCode').textContent=code;$('roomCodeBox').hidden=false;newGame();paused=true;$('message').textContent='Kadir’in bağlanması bekleniyor…';$('pause').textContent='⏸ Bekleniyor';setOnlineStatus('Oda hazır! Kadir bu kodu kendi cihazında girsin. Rakibin bağlanana kadar maç başlamayacak.');sendOnline('state',packState());}else{document.body.classList.add('online-guest');setOnlineStatus('Odaya bağlandın! Kadir olarak oynuyorsun. Melis’in maçı başlatmasını bekle.');sendOnline('hello',{name:'KADİR'});}}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setOnlineStatus('Bağlantı kurulamadı. Supabase Realtime ayarlarını kontrol edeceğiz.');$('createRoom').disabled=false;$('joinRoom').disabled=false;}});
 }
 $('createRoom').onclick=()=>{const code=String(Math.floor(100000+Math.random()*900000));$('roomCode').textContent=code;$('roomCodeBox').hidden=false;$('confirmCreateRoom').hidden=false;setOnlineStatus('Oda şifren hazır. Şifreyi Kadir’e gönder; ardından “Bu şifreyle odayı oluştur” düğmesine bas.');}; $('confirmCreateRoom').onclick=()=>{const code=$('roomCode').textContent.trim();if(/^\d{6}$/.test(code))connectRoom('host',code);};
 $('joinRoom').onclick=()=>{const code=$('roomInput').value.trim().toUpperCase();if(!/^\d{6}$/.test(code)){setOnlineStatus('Lütfen 6 karakterli geçerli oda kodunu gir.');return;}connectRoom('guest',code);};
@@ -299,7 +299,12 @@ let lastDraw=0;function loop(ts){const dt=Math.min((ts-last)/1000||0,0.04);last=
 window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();keys[k]=true;});window.addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;keys[k]=false;});document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;const on=e=>{e.preventDefault();keys[k]=true},off=e=>{e.preventDefault();keys[k]=false};b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,off));});function setMode(mode){document.body.classList.toggle('phone-mode',mode==='phone');document.body.classList.toggle('pc-mode',mode==='pc');$('phoneMode').classList.toggle('active',mode==='phone');$('pcMode').classList.toggle('active',mode==='pc');$('modeHint').textContent=mode==='phone'?'Telefon modu: çevrim içi maçta yalnızca kendi tuşların görünür.':'PC modu: klavye ile oynayın.';try{localStorage.setItem('mkw_headball_mode',mode)}catch(e){}}
 $('phoneMode').onclick=()=>setMode('phone');$('pcMode').onclick=()=>setMode('pc');
 let preferredMode='pc';try{preferredMode=localStorage.getItem('mkw_headball_mode')||(matchMedia('(max-width: 700px), (pointer: coarse)').matches?'phone':'pc')}catch(e){}setMode(preferredMode);
-$('restart').onclick=()=>{if(onlineRole==='guest')return;newGame();if(onlineRole==='host')sendOnline('state',packState());};$('pause').onclick=()=>{if(ended||onlineRole==='guest')return;paused=!paused;$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';if(onlineRole==='host')sendOnline('state',packState());};$('landscapeBtn').onclick=()=>{};window.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement&&onlineConnected&&(onlineRole==='host'||onlineRole==='guest')){document.body.classList.add('online-playing');setRoleControlVisibility(onlineRole);}});
+$('rematchRequest').onclick=()=>{
+ if(onlineRole==='guest'){sendOnline('rematch-request',{from:'KADIR'});$('message').textContent='Rövanş isteğin Melis’e gönderildi. 💜';$('rematchRequest').hidden=true;return;}
+ if(onlineRole==='host'&&onlineConnected){newGame();paused=false;$('message').textContent='Rövanş başladı! ⚽';sendOnline('rematch-start',{start:true});sendOnline('state',packState());$('rematchRequest').hidden=true;return;}
+ if(!onlineRole){newGame();$('rematchRequest').hidden=true;}
+};
+$('restart').onclick=()=>{if(onlineRole==='guest')return;if(onlineRole==='host'&&!remoteKeys.__joined){$('message').textContent='Önce Kadir’in bağlanmasını bekleyelim.';return;}newGame();if(onlineRole==='host')sendOnline('state',packState());};$('pause').onclick=()=>{if(ended||onlineRole==='guest')return;paused=!paused;$('pause').textContent=paused?'▶ Devam et':'⏸ Duraklat';if(onlineRole==='host')sendOnline('state',packState());};$('landscapeBtn').onclick=()=>{};window.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement&&onlineConnected&&(onlineRole==='host'||onlineRole==='guest')){document.body.classList.add('online-playing');setRoleControlVisibility(onlineRole);}});
 newGame();paused=true;$('pause').textContent='▶ Devam et';$('message').textContent='Çevrim içi oynamak için oda oluştur veya oda koduyla katıl.';requestAnimationFrame(loop);
 })();
 </script></body></html>
