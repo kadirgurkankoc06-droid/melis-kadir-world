@@ -174,6 +174,9 @@ const SUPABASE_KEY='sb_publishable_EFCm1nw2PJ0sYb1Mxc1BWw_Ao0idjYb';
 const supabaseClient=window.supabase?.createClient?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 let selectedCharacter=null,hostCharacter='MELİS',guestCharacter='KADİR',characterConfirmed=false;
 let onlineChannel=null,onlineRole=null,onlineRoom=null,remoteKeys={},lastStateSend=0,onlineConnected=false,opponentJoined=false,remoteTarget=null,rematchRequested=false,guestRematchRequested=false,ballSnapshots=[];
+// WebRTC oyun veri kanalı: Supabase yalnızca oda eşleştirme ve bağlantı sinyalleşmesi için kullanılır.
+let rtcPeer=null,rtcData=null,rtcPendingCandidates=[],rtcReady=false,rtcStarting=false;
+const rtcConfig={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
 const c=document.getElementById('game');
 // Tuvalin iç çözünürlüğünü oyun koordinatlarıyla birebir tut.
 // Mobil cihazlarda ölçekli backing-store bazı tarayıcılarda yerel çizimi bulanık/donuk gösterebildiği için kapalı.
@@ -293,9 +296,80 @@ function leaveOnlineToLobby(){
 }
 function packState(){return {sentAt:Date.now(),p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
 function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;remoteTarget=s;if(onlineRole==='guest'){ballSnapshots.push({receivedAt:performance.now(),ball:{x:s.ball.x,y:s.ball.y,vx:s.ball.vx,vy:s.ball.vy,r:s.ball.r}});if(ballSnapshots.length>12)ballSnapshots.shift();}score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;ended=s.ended;const a=$('s1'),b=$('s2'),tm=$('timer'),msg=$('message'),pauseBtn=$('pause');const v1=String(score1),v2=String(score2),vt=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;if(a.textContent!==v1)a.textContent=v1;if(b.textContent!==v2)b.textContent=v2;if(tm.textContent!==vt)tm.textContent=vt;if(msg.textContent!==(s.message||''))msg.textContent=s.message||'';const pt=paused?'▶ Devam et':'⏸ Duraklat';if(pauseBtn.textContent!==pt)pauseBtn.textContent=pt;$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
-function sendOnline(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
+function sendSignal(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
+function rtcIsOpen(){return !!(rtcData&&rtcData.readyState==='open');}
+function sendOnline(event,payload){
+ // Hareket ve fizik paketleri doğrudan WebRTC DataChannel üzerinden gider.
+ if((event==='input'||event==='state')&&rtcIsOpen()){
+  try{rtcData.send(JSON.stringify({event,payload}));return;}catch(e){}
+ }
+ // WebRTC kurulana kadar veya bağlantı desteklenmezse eski Supabase yolu yedek olarak kalır.
+ sendSignal(event,payload);
+}
+function closeRtc(){
+ rtcReady=false;rtcStarting=false;rtcPendingCandidates=[];
+ try{if(rtcData){rtcData.onopen=rtcData.onclose=rtcData.onmessage=null;rtcData.close();}}catch(e){}
+ try{if(rtcPeer){rtcPeer.onicecandidate=rtcPeer.ondatachannel=rtcPeer.onconnectionstatechange=null;rtcPeer.close();}}catch(e){}
+ rtcData=null;rtcPeer=null;
+}
+function attachRtcDataChannel(channel){
+ rtcData=channel;channel.binaryType='arraybuffer';
+ channel.onopen=()=>{rtcReady=true;setOnlineStatus('Doğrudan oyun bağlantısı kuruldu. Maç akıcı şekilde aktarılıyor.');};
+ channel.onclose=()=>{rtcReady=false;setOnlineStatus('Doğrudan bağlantı kapandı; yedek bağlantı kullanılıyor.');};
+ channel.onerror=()=>{rtcReady=false;};
+ channel.onmessage=ev=>{
+  let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
+  if(msg.event==='input'&&onlineRole==='host'&&msg.payload?.keys)remoteKeys=msg.payload.keys;
+  if(msg.event==='state'&&onlineRole==='guest')applyState(msg.payload);
+ };
+}
+function createRtcPeer(){
+ if(rtcPeer)return rtcPeer;
+ rtcPeer=new RTCPeerConnection(rtcConfig);
+ rtcPeer.onicecandidate=ev=>{if(ev.candidate)sendSignal('rtc-signal',{kind:'candidate',candidate:ev.candidate,from:onlineRole});};
+ rtcPeer.onconnectionstatechange=()=>{
+  const state=rtcPeer?.connectionState;
+  if(state==='failed'||state==='disconnected'){
+   rtcReady=false;
+   setOnlineStatus('Doğrudan bağlantı kurulamadı; yedek bağlantıyla devam ediliyor.');
+  }
+ };
+ return rtcPeer;
+}
+async function flushRtcCandidates(){
+ if(!rtcPeer?.remoteDescription)return;
+ const pending=rtcPendingCandidates.splice(0);
+ for(const candidate of pending){try{await rtcPeer.addIceCandidate(candidate);}catch(e){}}
+}
+async function startHostRtc(){
+ if(onlineRole!=='host'||rtcStarting||rtcPeer)return;
+ rtcStarting=true;
+ try{
+  const pc=createRtcPeer();
+  attachRtcDataChannel(pc.createDataChannel('mkw-game',{ordered:true}));
+  const offer=await pc.createOffer();await pc.setLocalDescription(offer);
+  sendSignal('rtc-signal',{kind:'offer',description:pc.localDescription,from:'host'});
+ }catch(e){rtcStarting=false;setOnlineStatus('Doğrudan bağlantı başlatılamadı; yedek bağlantı kullanılacak.');}
+}
+async function handleRtcSignal(payload){
+ if(!payload||payload.from===onlineRole)return;
+ try{
+  if(payload.kind==='offer'&&onlineRole==='guest'){
+   if(rtcPeer)closeRtc();const pc=createRtcPeer();
+   pc.ondatachannel=ev=>attachRtcDataChannel(ev.channel);
+   await pc.setRemoteDescription(payload.description);await flushRtcCandidates();
+   const answer=await pc.createAnswer();await pc.setLocalDescription(answer);
+   sendSignal('rtc-signal',{kind:'answer',description:pc.localDescription,from:'guest'});
+  }else if(payload.kind==='answer'&&onlineRole==='host'&&rtcPeer){
+   await rtcPeer.setRemoteDescription(payload.description);await flushRtcCandidates();
+  }else if(payload.kind==='candidate'){
+   if(rtcPeer?.remoteDescription)await rtcPeer.addIceCandidate(payload.candidate);
+   else rtcPendingCandidates.push(payload.candidate);
+  }
+ }catch(e){setOnlineStatus('WebRTC bağlantısı kurulamadı; yedek bağlantı kullanılacak.');}
+}
 function setOnlineStatus(t){$('onlineStatus').textContent=t;}
-function disconnectOnline(){if(onlineChannel&&supabaseClient)supabaseClient.removeChannel(onlineChannel);onlineChannel=null;onlineRole=null;onlineRoom=null;remoteKeys={};onlineConnected=false;opponentJoined=false;document.body.classList.remove('online-guest','online-host','online-playing');document.querySelectorAll('.controls .control-card').forEach(card=>{card.hidden=false;card.style.removeProperty('display')});$('roomCodeBox').hidden=true;$('createRoom').disabled=false;$('joinRoom').disabled=false;setOnlineStatus('Çevrim içi oynamak için bir kişi oda oluşturur, diğeri oda kodunu girer.');}
+function disconnectOnline(){closeRtc();if(onlineChannel&&supabaseClient)supabaseClient.removeChannel(onlineChannel);onlineChannel=null;onlineRole=null;onlineRoom=null;remoteKeys={};onlineConnected=false;opponentJoined=false;document.body.classList.remove('online-guest','online-host','online-playing');document.querySelectorAll('.controls .control-card').forEach(card=>{card.hidden=false;card.style.removeProperty('display')});$('roomCodeBox').hidden=true;$('createRoom').disabled=false;$('joinRoom').disabled=false;setOnlineStatus('Çevrim içi oynamak için bir kişi oda oluşturur, diğeri oda kodunu girer.');}
 function setRoleControlVisibility(role){
  const cards=document.querySelectorAll('.controls .control-card');
  cards.forEach((card,i)=>{
@@ -324,9 +398,10 @@ async function connectRoom(role,code){
  const orientationTask=enterMatchOrientation();
  if(!supabaseClient){setOnlineStatus('Bağlantı kütüphanesi yüklenemedi. Sayfayı yenileyip tekrar dene.');return;}disconnectOnline();onlineRole=role;onlineRoom=code;setOnlineStatus('Odaya bağlanılıyor…');$('createRoom').disabled=true;$('joinRoom').disabled=true;document.body.classList.toggle('online-host',role==='host');document.body.classList.toggle('online-guest',role==='guest');
  const ch=supabaseClient.channel('mkw-headball-'+code,{config:{broadcast:{self:false},private:false}});onlineChannel=ch;
- ch.on('broadcast',{event:'input'},({payload})=>{if(payload&&payload.keys)remoteKeys=payload.keys;});
- ch.on('broadcast',{event:'state'},({payload})=>{if(onlineRole==='guest')applyState(payload);});
- ch.on('broadcast',{event:'hello'},({payload})=>{if(onlineRole==='host'&&!opponentJoined){guestCharacter=hostCharacter==='MELİS'?'KADİR':'MELİS';opponentJoined=true;sendOnline('character-assigned',{host:hostCharacter,guest:guestCharacter});newGame();$('lobbyOverlay').hidden=true;paused=false;$('message').textContent=guestCharacter+' bağlandı! Maç başlıyor. ⚽';sendOnline('state',packState());setOnlineStatus('Rakibe '+guestCharacter+' karakteri atandı. Maç başladı!');}});
+ ch.on('broadcast',{event:'rtc-signal'},({payload})=>{handleRtcSignal(payload);});
+ ch.on('broadcast',{event:'input'},({payload})=>{if(!rtcIsOpen()&&payload&&payload.keys)remoteKeys=payload.keys;});
+ ch.on('broadcast',{event:'state'},({payload})=>{if(onlineRole==='guest'&&!rtcIsOpen())applyState(payload);});
+ ch.on('broadcast',{event:'hello'},({payload})=>{if(onlineRole==='host'&&!opponentJoined){guestCharacter=hostCharacter==='MELİS'?'KADİR':'MELİS';opponentJoined=true;sendOnline('character-assigned',{host:hostCharacter,guest:guestCharacter});newGame();$('lobbyOverlay').hidden=true;paused=false;$('message').textContent=guestCharacter+' bağlandı! Maç başlıyor. ⚽';sendOnline('state',packState());setOnlineStatus('Oyuncu bağlandı. Doğrudan oyun bağlantısı kuruluyor…');startHostRtc();}});
  ch.on('broadcast',{event:'character-assigned'},({payload})=>{if(onlineRole==='guest'&&payload){hostCharacter=payload.host;guestCharacter=payload.guest;selectedCharacter=guestCharacter;newGame();$('lobbyOverlay').hidden=true;paused=false;$('message').textContent='Sen '+guestCharacter+' karakterisin. Maç başladı!';setOnlineStatus('Sana '+guestCharacter+' karakteri atandı.');}});
  ch.on('broadcast',{event:'rematch-request'},()=>{if(onlineRole==='host'){rematchRequested=true;$('message').textContent='Kadir rövanş istiyor! 💜';if(ended)showMatchEnd();}});
  ch.on('broadcast',{event:'rematch-start'},()=>{if(onlineRole==='guest'){newGame();$('matchEnd').hidden=true;$('message').textContent='Rövanş başladı! ⚽';}});
@@ -415,8 +490,8 @@ function loop(ts){
  }
  if(onlineRole==='guest'&&onlineConnected){smoothRemoteCorrection();interpolateGuestBall(ts);}
  // Yedek durum paketi; asıl tuş paketleri keydown/keyup anında gönderilir.
- if(onlineConnected&&onlineRole&&ts-lastInputSend>180){lastInputSend=ts;sendOnline('input',localInputPacket());}
- if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>50){lastStateSend=ts;sendOnline('state',packState());}
+ if(onlineConnected&&onlineRole&&ts-lastInputSend>(rtcIsOpen()?100:180)){lastInputSend=ts;sendOnline('input',localInputPacket());}
+ if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>(rtcIsOpen()?33:50)){lastStateSend=ts;sendOnline('state',packState());}
  // Her animasyon karesinde çiz: yerel cihaz kendi hareketini bekletmeden görsün.
  lastDraw=ts;draw();
  requestAnimationFrame(loop)
