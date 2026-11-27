@@ -1,11 +1,12 @@
-MELIS & KADIR WORLD - Katilan oyuncu top senkronizasyon iyilestirmesi
+MELİS & KADİR WORLD - Misafir giriş onaylı senkronizasyon denemesi
 
-Bu pakette tek dosya vardir: kafa-topu.html
-GitHub deposunun ana dizinindeki ayni isimli dosyanin yerine koyun.
+Kurulum:
+1. Bu klasördeki kafa-topu.html dosyasını GitHub deposundaki aynı adlı dosyanın üzerine yükleyin.
+2. Commit changes yapın.
+3. Her iki cihazda oyunu tamamen yenileyin (PC: Ctrl+F5; telefon: sayfayı yenile / gerekirse site verisini önbelleksiz yenile).
 
-Degisiklik:
-- Katilan oyuncuda topun otoriter konumu artik sadece gecmis paketin koordinatina dogru cekilmiyor.
-- Son paket, alindiktan sonra gecen kisa sure icin top hizi ve yercekimi kullanilarak ileri tahmin ediliyor.
-- Duzeltme kare hizindan bagimsiz, yumusak ve daha hizli yapiliyor.
+Bu güncelleme misafir oyuncunun tuş durumlarına artan bir revizyon numarası ekler.
+Ev sahibi bu revizyonu aldığında sonraki oyun durumu paketinde onay numarasını geri gönderir.
+Misafir, kendi son giriş revizyonu onaylanana kadar eski top durumlarıyla yerel tahminini geri çekmez.
 
-Not: Bu, misafir taraftaki topun surekli gecmis konumu kovalamasi sorununu hedefleyen bir senkronizasyon iyilestirmesidir. Gercek iki cihazda test edilmemistir; fiziksel carpismalarda kucuk farklar olabilir.
+Bu bir deneysel senkronizasyon düzeltmesidir. Gerçek iki cihaz testi gerektirir.
