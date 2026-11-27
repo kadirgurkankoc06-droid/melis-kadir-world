@@ -541,36 +541,12 @@ function smoothRemoteCorrection(now){
  if(t&&!guestMoving){p2.x+=(t.p2.x-p2.x)*.08;p2.y+=(t.p2.y-p2.y)*.08;p2.vx+=(t.p2.vx-p2.vx)*.12;p2.vy+=(t.p2.vy-p2.vy)*.12;p2.onGround=t.p2.onGround;p2.cool=t.p2.cool;}
 }
 
-// Misafir cihazda top fiziğini yerel olarak da çalıştır: çizim yeni ağ paketini
-// beklemez. Ev sahibinden gelen durum yalnızca küçük hataları uzlaştırır.
-function simulateGuestBall(dt){
- if(onlineRole!=='guest'||!onlineConnected||paused||ended)return;
- const step=Math.min(dt,0.03)*60,gravity=.52;
- // Misafirin şutunu da kendi ekranında anında öngör; ev sahibi aynı girdiyi
- // aldığında otoriter fizik sonucunu snapshot ile uzlaştırır.
- p2.cool=Math.max(0,p2.cool-dt);
- if(keys.l&&p2.cool<=0){const dx=ball.x-p2.x,dy=ball.y-(p2.y-78),dist=Math.hypot(dx,dy);if(dist<125){const dir=dx===0?p2.dir:Math.sign(dx);ball.vx+=dir*12+p2.vx*.65;ball.vy-=10.5;p2.cool=.32;}}
- ball.vy+=gravity*.9*step;ball.x+=ball.vx*step;ball.y+=ball.vy*step;
- ball.vx*=Math.pow(.9975,step);ball.vy*=Math.pow(.999,step);
- // Aynı karakter-top çarpışma kuralı; oyuncuların konumları yerel tahmin/interpolasyondan gelir.
- collideBallWithPlayer(p1);collideBallWithPlayer(p2);
- if(ball.y+ball.r>ground){ball.y=ground-ball.r;if(Math.abs(ball.vy)>1.7)ball.vy*=-.62;else ball.vy=0;ball.vx*=.982;if(Math.abs(ball.vx)<.035)ball.vx=0;}
- if(ball.y-ball.r<15){ball.y=15+ball.r;ball.vy=Math.abs(ball.vy)*.8;}
- const gy=ground-145,pr=7,rest=.72;
- const segment=(x1,y1,x2,y2)=>{const sx=x2-x1,sy=y2-y1,len=sx*sx+sy*sy,t=len?Math.max(0,Math.min(1,((ball.x-x1)*sx+(ball.y-y1)*sy)/len)):0,qx=x1+t*sx,qy=y1+t*sy,dx=ball.x-qx,dy=ball.y-qy,d=Math.hypot(dx,dy),min=ball.r+pr;if(d>=min)return;const nx=d<.001?0:dx/d,ny=d<.001?-1:dy/d;ball.x=qx+nx*min;ball.y=qy+ny*min;const vn=ball.vx*nx+ball.vy*ny;if(vn<0){ball.vx-=(1+rest)*vn*nx;ball.vy-=(1+rest)*vn*ny;}};
- segment(8,gy,98,gy);segment(W-98,gy,W-8,gy);
- const post=(cx,cy)=>{const dx=ball.x-cx,dy=ball.y-cy,d=Math.hypot(dx,dy),min=ball.r+pr;if(d>=min)return;const nx=d<.001?1:dx/d,ny=d<.001?0:dy/d;ball.x=cx+nx*min;ball.y=cy+ny*min;const vn=ball.vx*nx+ball.vy*ny;if(vn<0){ball.vx-=(1+rest)*vn*nx;ball.vy-=(1+rest)*vn*ny;}};
- post(98,gy);post(W-98,gy);
- if(ball.x-ball.r<8&&ball.y>gy+ball.r&&ball.y<ground-ball.r){ball.x=8+ball.r;if(ball.vx<0)ball.vx=Math.abs(ball.vx)*.55;ball.vy*=.9;}
- if(ball.x+ball.r>W-8&&ball.y>gy+ball.r&&ball.y<ground-ball.r){ball.x=W-8-ball.r;if(ball.vx>0)ball.vx=-Math.abs(ball.vx)*.55;ball.vy*=.9;}
- if(ball.x-ball.r<0){ball.x=ball.r;if(ball.vx<0)ball.vx=Math.abs(ball.vx)*.5;}
- if(ball.x+ball.r>W){ball.x=W-ball.r;if(ball.vx>0)ball.vx=-Math.abs(ball.vx)*.5;}
-}
+// Misafir cihaz top fiziğini AYRICA çalıştırmaz. Topun tek otoritesi ev sahibidir.
+// Misafir yalnızca ev sahibinin sıralı olmayan ama sıra numarasıyla filtrelenen
+// güncel snapshot'larını yumuşak biçimde görüntüler. Böylece iki fizik motoru ayrışmaz.
+
 function reconcileGuestBall(dt=1/60){
  if(onlineRole!=='guest'||ballSnapshots.length===0)return;
- // Misafirin son tuş değişikliği ev sahibinde işlenmeden eski top snapshot'ı
- // yerel şut/hareket tahminini geri sarmasın. Ev sahibi onaylayınca uzlaştırma sürer.
- if(guestInputRevision>guestInputAck)return;
  // En son ev sahibi durumunu al ve paketin gelişinden beri geçen kısa süreyi
  // hız/yerçekimiyle ileri taşı. Böylece misafir, sürekli geçmişte kalan bir
  // konumu kovalamaz; kendi yerel tahminini güncel otoriter tahminle uzlaştırır.
@@ -605,9 +581,10 @@ function loop(ts){
  const elapsed=Math.min((ts-last)/1000||0,0.1);last=ts;simulationAccumulator=Math.min(simulationAccumulator+elapsed,0.1);
  const fixedStep=1/60;let steps=0;
  while(simulationAccumulator>=fixedStep&&steps<6){
-   // Ev sahibi tam fizik ve skoru yönetir; misafir kendi oyuncusunu ve topu yerel tahminle akıcı çizer.
+   // Tek fizik otoritesi ev sahibidir. Misafir yalnızca kendi karakterini yerel tahmin eder;
+   // topun ikinci bir fizik simülasyonunu çalıştırmaz.
    if(!onlineRole||onlineRole==='host')physics(fixedStep);
-   if(onlineRole==='guest'&&onlineConnected){predictGuestPlayer(fixedStep);simulateGuestBall(fixedStep);}
+   if(onlineRole==='guest'&&onlineConnected)predictGuestPlayer(fixedStep);
    simulationAccumulator-=fixedStep;steps++;
  }
  if(onlineRole==='guest'&&onlineConnected){smoothRemoteCorrection(ts);reconcileGuestBall(elapsed||1/60);}
