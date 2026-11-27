@@ -1,19 +1,11 @@
-MELİS & KADİR WORLD - TOP YEREL TAHMİN DÜZELTMESİ
+MELIS & KADIR WORLD - Katilan oyuncu top senkronizasyon iyilestirmesi
 
-Bu pakette yalnızca kafa-topu.html güncellenmiştir.
+Bu pakette tek dosya vardir: kafa-topu.html
+GitHub deposunun ana dizinindeki ayni isimli dosyanin yerine koyun.
 
-Değişiklik:
-- Odaya katılan oyuncunun cihazında top fiziği yerel olarak da simüle edilir.
-- Katılan oyuncunun şutu kendi ekranında anında öngörülür.
-- Ev sahibinden gelen WebRTC oyun durumlarıyla küçük farklar yumuşakça düzeltilir.
-- Büyük farklarda (ör. gol/pozisyon sıfırlama) otoriter konuma dönülür.
+Degisiklik:
+- Katilan oyuncuda topun otoriter konumu artik sadece gecmis paketin koordinatina dogru cekilmiyor.
+- Son paket, alindiktan sonra gecen kisa sure icin top hizi ve yercekimi kullanilarak ileri tahmin ediliyor.
+- Duzeltme kare hizindan bagimsiz, yumusak ve daha hizli yapiliyor.
 
-Supabase ve WebRTC bağlantısı, oyun tasarımı, karakter görselleri ve kontrol tuşları değiştirilmemiştir.
-
-Kurulum:
-1. ZIP'i açın.
-2. İçindeki kafa-topu.html dosyasını GitHub deposunun ana dizinine yükleyin.
-3. Aynı adlı eski dosyanın üzerine yazın ve commit edin.
-4. Oyunu iki cihazda Ctrl+F5 / sert yenileme ile açıp test edin.
-
-Not: JavaScript sözdizimi kontrol edildi. Gerçek iki cihazlı ağ testi bu ortamda yapılamadı.
+Not: Bu, misafir taraftaki topun surekli gecmis konumu kovalamasi sorununu hedefleyen bir senkronizasyon iyilestirmesidir. Gercek iki cihazda test edilmemistir; fiziksel carpismalarda kucuk farklar olabilir.

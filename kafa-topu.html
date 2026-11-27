@@ -344,9 +344,9 @@ function leaveOnlineToLobby(){
  const controls=document.querySelector('.controls');if(controls)controls.style.removeProperty('grid-template-columns');
  $('lobbyOverlay').hidden=true;newGame();
 }
-function updatePauseButton(){const b=$('pause');if(!b)return;b.textContent=paused?(pauseVotes[onlineRole||'host']?'⏳ Onay verildi':'▶ Devam Et'):'⏸ Duraklat';}
+function updatePauseButton(){const b=$('pause');if(!b)return;b.textContent=paused?(pauseVotes[onlineRole||'host']?'⏳ Onay verildi':'▶ Devam etmek için onayla'):'⏸ Duraklat';}
 function packState(){return {sentAt:Date.now(),pauseVotes:{...pauseVotes},p1:{x:p1.x,y:p1.y,vx:p1.vx,vy:p1.vy,onGround:p1.onGround,cool:p1.cool},p2:{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,cool:p2.cool},ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:ball.r},score1,score2,time,paused,ended,message:$('message').textContent};}
-function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;const goalJustScored=(s.score1!==score1||s.score2!==score2);if(goalJustScored){ballSnapshots.length=0;playerSnapshots.length=0;}remoteTarget=s;if(onlineRole==='guest'){const receivedAt=performance.now();ballSnapshots.push({receivedAt,ball:{x:s.ball.x,y:s.ball.y,vx:s.ball.vx,vy:s.ball.vy,r:s.ball.r}});if(ballSnapshots.length>12)ballSnapshots.shift();playerSnapshots.push({receivedAt,p1:{x:s.p1.x,y:s.p1.y,vx:s.p1.vx,vy:s.p1.vy,onGround:s.p1.onGround,cool:s.p1.cool}});if(playerSnapshots.length>12)playerSnapshots.shift();}score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;if(s.pauseVotes)pauseVotes={host:!!s.pauseVotes.host,guest:!!s.pauseVotes.guest};ended=s.ended;const a=$('s1'),b=$('s2'),tm=$('timer'),msg=$('message'),pauseBtn=$('pause');const v1=String(score1),v2=String(score2),vt=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;if(a.textContent!==v1)a.textContent=v1;if(b.textContent!==v2)b.textContent=v2;if(tm.textContent!==vt)tm.textContent=vt;if(msg.textContent!==(s.message||''))msg.textContent=s.message||'';const pt=paused?(pauseVotes[onlineRole||'host']?'⏳ Onay verildi':'▶ Devam Et'):'⏸ Duraklat';if(pauseBtn.textContent!==pt)pauseBtn.textContent=pt;$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
+function applyState(s){if(!s||!s.p1||!s.p2||!s.ball)return;const goalJustScored=(s.score1!==score1||s.score2!==score2);if(goalJustScored){ballSnapshots.length=0;playerSnapshots.length=0;}remoteTarget=s;if(onlineRole==='guest'){const receivedAt=performance.now();ballSnapshots.push({receivedAt,ball:{x:s.ball.x,y:s.ball.y,vx:s.ball.vx,vy:s.ball.vy,r:s.ball.r}});if(ballSnapshots.length>12)ballSnapshots.shift();playerSnapshots.push({receivedAt,p1:{x:s.p1.x,y:s.p1.y,vx:s.p1.vx,vy:s.p1.vy,onGround:s.p1.onGround,cool:s.p1.cool}});if(playerSnapshots.length>12)playerSnapshots.shift();}score1=s.score1;score2=s.score2;time=s.time;paused=s.paused;if(s.pauseVotes)pauseVotes={host:!!s.pauseVotes.host,guest:!!s.pauseVotes.guest};ended=s.ended;const a=$('s1'),b=$('s2'),tm=$('timer'),msg=$('message'),pauseBtn=$('pause');const v1=String(score1),v2=String(score2),vt=`${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}`;if(a.textContent!==v1)a.textContent=v1;if(b.textContent!==v2)b.textContent=v2;if(tm.textContent!==vt)tm.textContent=vt;if(msg.textContent!==(s.message||''))msg.textContent=s.message||'';const pt=paused?(pauseVotes[onlineRole||'host']?'⏳ Onay verildi':'▶ Devam etmek için onayla'):'⏸ Duraklat';if(pauseBtn.textContent!==pt)pauseBtn.textContent=pt;$('rematchRequest').hidden=!ended;if(ended)showMatchEnd();else $('matchEnd').hidden=true;}
 function sendSignal(event,payload){if(onlineChannel&&onlineConnected)onlineChannel.send({type:'broadcast',event,payload}).catch(()=>{});}
 function rtcIsOpen(){return !!(rtcData&&rtcData.readyState==='open'&&rtcStateData&&rtcStateData.readyState==='open');}
 function sendOnline(event,payload){
@@ -562,15 +562,33 @@ function simulateGuestBall(dt){
  if(ball.x-ball.r<0){ball.x=ball.r;if(ball.vx<0)ball.vx=Math.abs(ball.vx)*.5;}
  if(ball.x+ball.r>W){ball.x=W-ball.r;if(ball.vx>0)ball.vx=-Math.abs(ball.vx)*.5;}
 }
-function reconcileGuestBall(){
+function reconcileGuestBall(dt=1/60){
  if(onlineRole!=='guest'||ballSnapshots.length===0)return;
- const snap=ballSnapshots[ballSnapshots.length-1].ball;
- const dx=snap.x-ball.x,dy=snap.y-ball.y,err=Math.hypot(dx,dy);
- // Gol/reset gibi büyük farklarda otoriter konuma hemen dön; normal ağ sapmalarını yumuşat.
- if(err>95){ball.x=snap.x;ball.y=snap.y;ball.vx=snap.vx;ball.vy=snap.vy;}
- else{ball.x+=dx*.16;ball.y+=dy*.16;ball.vx+=(snap.vx-ball.vx)*.22;ball.vy+=(snap.vy-ball.vy)*.22;}
+ // En son ev sahibi durumunu al ve paketin gelişinden beri geçen kısa süreyi
+ // hız/yerçekimiyle ileri taşı. Böylece misafir, sürekli geçmişte kalan bir
+ // konumu kovalamaz; kendi yerel tahminini güncel otoriter tahminle uzlaştırır.
+ const entry=ballSnapshots[ballSnapshots.length-1],snap=entry.ball;
+ const age=Math.max(0,Math.min(.055,(performance.now()-entry.receivedAt)/1000));
+ const frames=age*60,gravity=.52*.9;
+ let targetX=snap.x+snap.vx*frames;
+ let targetY=snap.y+snap.vy*frames+.5*gravity*frames*frames;
+ let targetVx=snap.vx*Math.pow(.9975,frames);
+ let targetVy=(snap.vy+gravity*frames)*Math.pow(.999,frames);
+ // Kısa ileri tahmin saha dışına taşmasın; çarpışma/reset gibi büyük farklar
+ // aşağıdaki otoriter düzeltmede anında ele alınır.
+ targetX=Math.max(snap.r,Math.min(W-snap.r,targetX));
+ targetY=Math.min(ground-snap.r,Math.max(15+snap.r,targetY));
+ const dx=targetX-ball.x,dy=targetY-ball.y,err=Math.hypot(dx,dy);
+ if(err>110){ball.x=targetX;ball.y=targetY;ball.vx=targetVx;ball.vy=targetVy;}
+ else{
+  // Kare hızından bağımsız, yaklaşık 55 ms'lik hızlı ama yumuşak düzeltme.
+  const alpha=1-Math.exp(-Math.max(0,Math.min(dt,.05))/.055);
+  ball.x+=dx*alpha;ball.y+=dy*alpha;
+  ball.vx+=(targetVx-ball.vx)*Math.min(1,alpha*1.25);
+  ball.vy+=(targetVy-ball.vy)*Math.min(1,alpha*1.25);
+ }
  ball.r=snap.r;
- // Eski snapshot'ları sınırlı tut; en güncel otoriter durum düzeltme için yeterli.
+ // Yalnızca birkaç güncel örneği tut; eskimiş paketler görüntüyü geriye çekmesin.
  if(ballSnapshots.length>4)ballSnapshots.splice(0,ballSnapshots.length-4);
 }
 
@@ -585,7 +603,7 @@ function loop(ts){
    if(onlineRole==='guest'&&onlineConnected){predictGuestPlayer(fixedStep);simulateGuestBall(fixedStep);}
    simulationAccumulator-=fixedStep;steps++;
  }
- if(onlineRole==='guest'&&onlineConnected){smoothRemoteCorrection(ts);reconcileGuestBall();}
+ if(onlineRole==='guest'&&onlineConnected){smoothRemoteCorrection(ts);reconcileGuestBall(elapsed||1/60);}
  // Tuş durumu yedek olarak WebRTC'de 30 Hz, Realtime yedeğinde 20 Hz gönderilir.
  // Keydown/keyup paketleri ayrıca anında gönderildiği için bu döngü kayıp paketleri telafi eder.
  if(onlineConnected&&onlineRole&&ts-lastInputSend>(rtcIsOpen()?33:50)){lastInputSend=ts;sendOnline('input',localInputPacket());}
