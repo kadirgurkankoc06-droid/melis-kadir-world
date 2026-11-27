@@ -413,7 +413,7 @@ async function startHostRtc(){
   // karakterin tuşa basılı kalmasını önlemek için input kanalında paket kaybına izin verme.
   attachRtcDataChannel(pc.createDataChannel('mkw-input',{ordered:true}));
   // Pozisyon paketleri eskidiklerinde tekrar gönderilmesin; güncel paket daha değerlidir.
-  attachRtcDataChannel(pc.createDataChannel('mkw-state',{ordered:false,maxRetransmits:0}));
+  attachRtcDataChannel(pc.createDataChannel('mkw-state',{ordered:false,maxRetransmits:1}));
   const offer=await pc.createOffer();await pc.setLocalDescription(offer);
   sendSignal('rtc-signal',{kind:'offer',description:pc.localDescription,from:'host'});
  }catch(e){rtcStarting=false;setOnlineStatus('Doğrudan bağlantı başlatılamadı; yedek bağlantı kullanılacak.');}
@@ -531,15 +531,20 @@ function smoothRemoteCorrection(now){
 
 function interpolateGuestBall(now){
  if(onlineRole!=='guest'||ballSnapshots.length===0)return;
- // Yaklaşık 90 ms tampon: paketler arasındaki konumu çiz, yeni paket kısa süre gecikirse hızıyla tahmin et.
- const renderAt=now-65;
+ // Ağ dalgalanmasını karşılamak için 100 ms tampon: misafir eski paketleri
+ // doğrudan ekrana basmak yerine düzenli aralıklarla aradaki konumu çizer.
+ const renderAt=now-100;
  while(ballSnapshots.length>2&&ballSnapshots[1].receivedAt<renderAt)ballSnapshots.shift();
  const first=ballSnapshots[0],second=ballSnapshots[1];
  const extrapolate=snap=>{
-  const age=Math.max(0,Math.min(0.16,(renderAt-snap.receivedAt)/1000));
+  const age=Math.max(0,Math.min(0.08,(renderAt-snap.receivedAt)/1000));
+  // Kısa boşluklarda yerçekimini de hesaba kat; uzun boşluklarda eski
+  // hızı sınırsız sürdürüp topu yanlış konuma taşımayı önle.
   ball.x=snap.ball.x+snap.ball.vx*age*60;
-  ball.y=snap.ball.y+snap.ball.vy*age*60;
-  ball.vx=snap.ball.vx;ball.vy=snap.ball.vy;ball.r=snap.ball.r;
+  ball.y=snap.ball.y+snap.ball.vy*age*60+0.52*0.9*0.5*Math.pow(age*60,2);
+  ball.vx=snap.ball.vx*Math.pow(0.9975,age*60);
+  ball.vy=(snap.ball.vy+0.52*0.9*age*60)*Math.pow(0.999,age*60);
+  ball.r=snap.ball.r;
  };
  if(!second||renderAt>second.receivedAt){extrapolate(second||first);return;}
  if(renderAt<first.receivedAt){extrapolate(first);return;}
@@ -563,7 +568,8 @@ function loop(ts){
  // Tuş durumu yedek olarak WebRTC'de 30 Hz, Realtime yedeğinde 20 Hz gönderilir.
  // Keydown/keyup paketleri ayrıca anında gönderildiği için bu döngü kayıp paketleri telafi eder.
  if(onlineConnected&&onlineRole&&ts-lastInputSend>(rtcIsOpen()?33:50)){lastInputSend=ts;sendOnline('input',localInputPacket());}
- // Oyun durumu ve top konumu WebRTC üzerinden yaklaşık 33 Hz aktarılır.
+ // Oyun durumu ve top konumu WebRTC üzerinden yaklaşık 33 Hz aktarılır;
+ // state kanalında tek yeniden iletim kayıp paketlerin oluşturduğu aralığı azaltır.
  if(onlineRole==='host'&&onlineConnected&&opponentJoined&&ts-lastStateSend>(rtcIsOpen()?30:50)){lastStateSend=ts;sendOnline('state',packState());}
  // Her animasyon karesinde çiz: yerel cihaz kendi hareketini bekletmeden görsün.
  lastDraw=ts;draw();
