@@ -1,21 +1,19 @@
-MELIS & KADIR WORLD
+MELİS & KADİR WORLD - TOP YEREL TAHMİN DÜZELTMESİ
 
-GitHub Pages'e yükleme:
-1. ZIP dosyasını bilgisayarında çıkar.
-2. İçindeki index.html, game.html, kafa-topu.html, README.txt, robots.txt, melis-avatar.png ve kadir-avatar.png dosyalarını GitHub deposunun ana dizinine yükle.
-3. Aynı adlı dosyalar sorulursa üzerine yazmayı seç.
-4. Commit changes ile kaydet.
-5. Yayın adresini açıp Ctrl+F5 yap.
+Bu pakette yalnızca kafa-topu.html güncellenmiştir.
 
-Ortak anılar / Supabase:
-- Dünya haritası, gezilen yerler, istek listesi, il işaretleri ve fotoğraflar Supabase üzerinden ortak tutulur.
-- Herkes siteyi giriş yapmadan görüntüleyebilir.
-- Yer ve fotoğraf ekleme/düzenleme için yalnızca Supabase'de oluşturulmuş Kadir hesabıyla giriş yapılır.
-- Sitedeki Giriş yap düğmesine basıp Supabase Auth kullanıcısının e-posta ve şifresini gir.
-- Tarayıcıya yalnızca Supabase publishable anahtarı eklenmiştir. Secret/service_role anahtarını GitHub'a veya site dosyalarına koyma.
-- Storage bucket: world-photos (public read, yalnızca Kadir kullanıcısına upload).
-- Database table: public.world_data (id=1, data JSONB).
+Değişiklik:
+- Odaya katılan oyuncunun cihazında top fiziği yerel olarak da simüle edilir.
+- Katılan oyuncunun şutu kendi ekranında anında öngörülür.
+- Ev sahibinden gelen WebRTC oyun durumlarıyla küçük farklar yumuşakça düzeltilir.
+- Büyük farklarda (ör. gol/pozisyon sıfırlama) otoriter konuma dönülür.
 
-Not: İlk kez Kadir hesabıyla giriş yapıldığında bu bilgisayarda localStorage'da bulunan eski konumlar ortak veritabanına aktarılır. Fotoğraflar Storage'a yüklenir.
+Supabase ve WebRTC bağlantısı, oyun tasarımı, karakter görselleri ve kontrol tuşları değiştirilmemiştir.
 
-Kafa Topu: kafa-topu.html dosyası. Oyun içinde Telefon ve PC modları seçilebilir. Melis karakteri mor renktedir.
+Kurulum:
+1. ZIP'i açın.
+2. İçindeki kafa-topu.html dosyasını GitHub deposunun ana dizinine yükleyin.
+3. Aynı adlı eski dosyanın üzerine yazın ve commit edin.
+4. Oyunu iki cihazda Ctrl+F5 / sert yenileme ile açıp test edin.
+
+Not: JavaScript sözdizimi kontrol edildi. Gerçek iki cihazlı ağ testi bu ortamda yapılamadı.
