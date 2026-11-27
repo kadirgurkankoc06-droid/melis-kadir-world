@@ -409,8 +409,9 @@ async function startHostRtc(){
  rtcStarting=true;
  try{
   const pc=createRtcPeer();
-  // Girişler tam tuş durumu taşıdığı için sırasız/kayıpsızlık zorunlu olmayan kanal: eski input beklemez.
-  attachRtcDataChannel(pc.createDataChannel('mkw-input',{ordered:false,maxRetransmits:0}));
+  // Tuş girişleri güvenilir ve sıralı taşınır: özellikle keyup paketinin kaybolup
+  // karakterin tuşa basılı kalmasını önlemek için input kanalında paket kaybına izin verme.
+  attachRtcDataChannel(pc.createDataChannel('mkw-input',{ordered:true}));
   // Pozisyon paketleri eskidiklerinde tekrar gönderilmesin; güncel paket daha değerlidir.
   attachRtcDataChannel(pc.createDataChannel('mkw-state',{ordered:false,maxRetransmits:0}));
   const offer=await pc.createOffer();await pc.setLocalDescription(offer);
